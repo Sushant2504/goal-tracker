@@ -1,11 +1,8 @@
-import { PrismaClient } from "@prisma/client";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 import bcrypt from "bcryptjs";
-import path from "path";
 
-const dbPath = path.join(process.cwd(), "dev.db");
-const adapter = new PrismaBetterSqlite3({ url: `file:${dbPath}` });
-const prisma = new PrismaClient({ adapter });
+// Use @prisma/client which re-exports from the generated output
+const { PrismaClient } = await import("@prisma/client");
+const prisma = new PrismaClient();
 
 async function main() {
   await prisma.notification.deleteMany();
@@ -20,7 +17,7 @@ async function main() {
   await prisma.user.deleteMany();
   await prisma.appSettings.deleteMany();
 
-  const hash = (pw: string) => bcrypt.hashSync(pw, 10);
+  const hash = (pw) => bcrypt.hashSync(pw, 10);
 
   const admin = await prisma.user.create({
     data: { email: "admin@atomburg.com", passwordHash: hash("admin123"), name: "Priya Sharma", role: "ADMIN", department: "Human Resources" },
