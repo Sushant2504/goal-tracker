@@ -1,16 +1,17 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
 import {
   Plus,
   Trash2,
   Save,
   Send,
   AlertCircle,
-  CheckCircle2,
   ChevronDown,
   GripVertical,
   Target,
@@ -19,10 +20,13 @@ import {
 import {
   validateGoals,
   GOAL_RULES,
-  type GoalInput,
   type ValidationError,
 } from "@/lib/validation";
 import { getUomLabel, formatTarget } from "@/lib/scoring";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { StatusBadge } from "@/components/shared/StatusBadge";
+import { PageSkeleton } from "@/components/shared/LoadingSkeleton";
+import { EmptyState } from "@/components/shared/EmptyState";
 
 const THRUST_AREAS = [
   "Product Development",
@@ -81,22 +85,6 @@ interface GoalCycle {
   goalSettingCloses: string;
 }
 
-function getStatusBadge(status: string) {
-  const styles: Record<string, string> = {
-    DRAFT: "bg-gray-100 text-gray-700 border-gray-200",
-    SUBMITTED: "bg-yellow-50 text-yellow-700 border-yellow-200",
-    APPROVED: "bg-emerald-50 text-emerald-700 border-emerald-200",
-    RETURNED: "bg-red-50 text-red-700 border-red-200",
-  };
-  return (
-    <span
-      className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium ${styles[status] || styles.DRAFT}`}
-    >
-      {status}
-    </span>
-  );
-}
-
 function emptyGoal(sortOrder: number): GoalFormData {
   return {
     thrustArea: "",
@@ -115,7 +103,6 @@ function emptyGoal(sortOrder: number): GoalFormData {
 
 export default function EmployeeGoalsPage() {
   const { data: session } = useSession();
-  const router = useRouter();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -124,18 +111,6 @@ export default function EmployeeGoalsPage() {
   const [goalSheet, setGoalSheet] = useState<GoalSheet | null>(null);
   const [goals, setGoals] = useState<GoalFormData[]>([emptyGoal(0)]);
   const [errors, setErrors] = useState<ValidationError[]>([]);
-  const [toast, setToast] = useState<{
-    message: string;
-    type: "success" | "error";
-  } | null>(null);
-
-  const showToast = useCallback(
-    (message: string, type: "success" | "error") => {
-      setToast({ message, type });
-      setTimeout(() => setToast(null), 4000);
-    },
-    []
-  );
 
   // Load active cycle and goal sheet
   useEffect(() => {
@@ -192,14 +167,14 @@ export default function EmployeeGoalsPage() {
         }
       } catch (err) {
         console.error("Load error:", err);
-        showToast("Failed to load data. Please refresh.", "error");
+        toast.error("Failed to load data. Please refresh.");
       } finally {
         setLoading(false);
       }
     }
 
     loadData();
-  }, [session?.user?.id, showToast]);
+  }, [session?.user?.id]);
 
   const totalWeightage = goals.reduce((sum, g) => sum + (g.weightage || 0), 0);
   const isEditable =
@@ -212,10 +187,7 @@ export default function EmployeeGoalsPage() {
 
   function addGoal() {
     if (goals.length >= GOAL_RULES.MAX_GOALS) {
-      showToast(
-        `Maximum ${GOAL_RULES.MAX_GOALS} goals allowed`,
-        "error"
-      );
+      toast.error(`Maximum ${GOAL_RULES.MAX_GOALS} goals allowed`);
       return;
     }
     setGoals([...goals, emptyGoal(goals.length)]);
@@ -255,7 +227,7 @@ export default function EmployeeGoalsPage() {
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "Failed to create goal sheet";
-      showToast(message, "error");
+      toast.error(message);
       return null;
     }
   }
@@ -290,7 +262,7 @@ export default function EmployeeGoalsPage() {
         const data = await res.json();
         if (data.errors) {
           setErrors(data.errors);
-          showToast("Please fix validation errors", "error");
+          toast.error("Please fix validation errors");
           return;
         }
         throw new Error(data.error || "Failed to save");
@@ -317,11 +289,11 @@ export default function EmployeeGoalsPage() {
         );
       }
       setErrors([]);
-      showToast("Goals saved as draft", "success");
+      toast.success("Goals saved as draft");
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "Failed to save goals";
-      showToast(message, "error");
+      toast.error(message);
     } finally {
       setSaving(false);
     }
@@ -342,7 +314,7 @@ export default function EmployeeGoalsPage() {
 
     if (validationErrors.length > 0) {
       setErrors(validationErrors);
-      showToast("Please fix all validation errors before submitting", "error");
+      toast.error("Please fix all validation errors before submitting");
       return;
     }
 
@@ -376,7 +348,7 @@ export default function EmployeeGoalsPage() {
         const data = await saveRes.json();
         if (data.errors) {
           setErrors(data.errors);
-          showToast("Please fix validation errors", "error");
+          toast.error("Please fix validation errors");
           return;
         }
         throw new Error(data.error || "Failed to save");
@@ -391,7 +363,7 @@ export default function EmployeeGoalsPage() {
         const data = await submitRes.json();
         if (data.errors) {
           setErrors(data.errors);
-          showToast("Validation errors during submission", "error");
+          toast.error("Validation errors during submission");
           return;
         }
         throw new Error(data.error || "Failed to submit");
@@ -400,152 +372,86 @@ export default function EmployeeGoalsPage() {
       const submitted = await submitRes.json();
       setGoalSheet(submitted);
       setErrors([]);
-      showToast("Goal sheet submitted for approval!", "success");
+      toast.success("Goal sheet submitted for approval!");
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "Failed to submit";
-      showToast(message, "error");
+      toast.error(message);
     } finally {
       setSubmitting(false);
     }
   }
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-8 w-8 animate-spin rounded-full border-3 border-indigo-200 border-t-indigo-600" />
-          <p className="text-sm text-gray-500">Loading goals...</p>
-        </div>
-      </div>
-    );
+    return <PageSkeleton />;
   }
 
   if (!activeCycle) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 px-4">
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-8 text-center max-w-md">
-          <AlertCircle className="mx-auto h-10 w-10 text-amber-500 mb-3" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            No Active Goal Cycle
-          </h3>
-          <p className="text-sm text-gray-600">
-            There is no active goal cycle at the moment. Please check back
-            later or contact your administrator.
-          </p>
-        </div>
+      <div className="space-y-1">
+        <PageHeader
+          breadcrumbs={[
+            { label: "Dashboard", href: "/dashboard" },
+            { label: "My Goals" },
+          ]}
+          title="My Goals"
+        />
+        <EmptyState
+          icon={AlertCircle}
+          title="No Active Goal Cycle"
+          description="There is no active goal cycle at the moment. Please check back later or contact your administrator."
+        />
       </div>
     );
   }
 
+  const sheetStatus = goalSheet?.status || "DRAFT";
+
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
-      {/* Toast notification */}
-      {toast && (
-        <div
-          className={`fixed top-4 right-4 z-50 flex items-center gap-2 rounded-lg border px-4 py-3 shadow-lg transition-all ${
-            toast.type === "success"
-              ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-              : "border-red-200 bg-red-50 text-red-800"
-          }`}
-        >
-          {toast.type === "success" ? (
-            <CheckCircle2 className="h-4 w-4" />
-          ) : (
-            <AlertCircle className="h-4 w-4" />
-          )}
-          <span className="text-sm font-medium">{toast.message}</span>
-          <button
-            onClick={() => setToast(null)}
-            className="ml-2 text-current opacity-60 hover:opacity-100"
-          >
-            x
-          </button>
-        </div>
-      )}
-
+    <div className="space-y-4 max-w-5xl mx-auto">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">My Goals</h2>
-          <p className="text-sm text-gray-500 mt-1">
-            {activeCycle.name} &middot;{" "}
-            {goalSheet
-              ? getStatusBadge(goalSheet.status)
-              : getStatusBadge("DRAFT")}
-          </p>
-        </div>
-        {isEditable && (
+      <PageHeader
+        breadcrumbs={[
+          { label: "Dashboard", href: "/dashboard" },
+          { label: "My Goals" },
+        ]}
+        title="My Goals"
+        subtitle={activeCycle.name}
+        actions={
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              onClick={handleSave}
-              disabled={saving || submitting}
-            >
-              <Save className="h-4 w-4 mr-1" />
-              {saving ? "Saving..." : "Save Draft"}
-            </Button>
-            <Button
-              onClick={handleSubmit}
-              disabled={saving || submitting}
-            >
-              <Send className="h-4 w-4 mr-1" />
-              {submitting ? "Submitting..." : "Submit for Approval"}
-            </Button>
+            <StatusBadge status={sheetStatus} />
+            {isEditable && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSave}
+                  disabled={saving || submitting}
+                >
+                  <Save className="h-3.5 w-3.5 mr-1" />
+                  {saving ? "Saving..." : "Save Draft"}
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleSubmit}
+                  disabled={saving || submitting}
+                >
+                  <Send className="h-3.5 w-3.5 mr-1" />
+                  {submitting ? "Submitting..." : "Submit"}
+                </Button>
+              </>
+            )}
           </div>
-        )}
-      </div>
+        }
+      />
 
-      {/* Return comment banner */}
-      {goalSheet?.status === "RETURNED" && goalSheet.returnComment && (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-4">
-          <div className="flex items-start gap-3">
-            <AlertCircle className="h-5 w-5 text-red-500 mt-0.5 shrink-0" />
-            <div>
-              <h4 className="text-sm font-semibold text-red-800">
-                Returned for Revision
-              </h4>
-              <p className="text-sm text-red-700 mt-1">
-                {goalSheet.returnComment}
-              </p>
-            </div>
-          </div>
+      {/* Weightage progress bar - compact */}
+      <div className="rounded-lg border border-gray-200 bg-white px-4 py-2.5 flex items-center gap-4">
+        <div className="flex items-center gap-2 shrink-0">
+          <Target className="h-4 w-4 text-gray-400" />
+          <span className="text-[13px] font-medium text-gray-600">Weightage</span>
         </div>
-      )}
-
-      {/* Read-only notice */}
-      {isReadOnly && (
-        <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
-          <div className="flex items-center gap-3">
-            <Info className="h-5 w-5 text-blue-500 shrink-0" />
-            <p className="text-sm text-blue-700">
-              {goalSheet?.status === "SUBMITTED"
-                ? "Your goal sheet has been submitted and is pending manager approval. Goals cannot be edited."
-                : "Your goal sheet has been approved. Goals are locked."}
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Weightage summary bar */}
-      <div className="rounded-xl border border-gray-200 bg-white p-4">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium text-gray-700">
-            Total Weightage
-          </span>
-          <span
-            className={`text-sm font-bold ${
-              totalWeightage === 100
-                ? "text-emerald-600"
-                : totalWeightage > 100
-                  ? "text-red-600"
-                  : "text-amber-600"
-            }`}
-          >
-            {totalWeightage}% / 100%
-          </span>
-        </div>
-        <div className="h-2.5 rounded-full bg-gray-100 overflow-hidden">
+        <div className="flex-1 h-2 rounded-full bg-gray-100 overflow-hidden">
           <div
             className={`h-full rounded-full transition-all duration-300 ${
               totalWeightage === 100
@@ -557,24 +463,62 @@ export default function EmployeeGoalsPage() {
             style={{ width: `${Math.min(totalWeightage, 100)}%` }}
           />
         </div>
-        <div className="flex items-center justify-between mt-2 text-xs text-gray-500">
-          <span>
-            {goals.length} goal{goals.length !== 1 ? "s" : ""} (max{" "}
-            {GOAL_RULES.MAX_GOALS})
-          </span>
-          <span>Min {GOAL_RULES.MIN_WEIGHTAGE}% per goal</span>
-        </div>
+        <span
+          className={`text-[13px] font-semibold tabular-nums shrink-0 ${
+            totalWeightage === 100
+              ? "text-emerald-600"
+              : totalWeightage > 100
+                ? "text-red-600"
+                : "text-amber-600"
+          }`}
+        >
+          {totalWeightage}%
+        </span>
+        <span className="text-[11px] text-gray-400 shrink-0">
+          {goals.length}/{GOAL_RULES.MAX_GOALS} goals
+        </span>
       </div>
+
+      {/* Return comment banner */}
+      {goalSheet?.status === "RETURNED" && goalSheet.returnComment && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3">
+          <div className="flex items-start gap-2">
+            <AlertCircle className="h-4 w-4 text-red-500 mt-0.5 shrink-0" />
+            <div>
+              <p className="text-[13px] font-semibold text-red-800">
+                Returned for Revision
+              </p>
+              <p className="text-[13px] text-red-700 mt-0.5">
+                {goalSheet.returnComment}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Read-only notice */}
+      {isReadOnly && (
+        <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
+          <div className="flex items-center gap-2">
+            <Info className="h-4 w-4 text-blue-500 shrink-0" />
+            <p className="text-[13px] text-blue-700">
+              {goalSheet?.status === "SUBMITTED"
+                ? "Your goal sheet has been submitted and is pending manager approval. Goals cannot be edited."
+                : "Your goal sheet has been approved. Goals are locked."}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Validation errors */}
       {errors.length > 0 && (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-4">
-          <h4 className="text-sm font-semibold text-red-800 mb-2">
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3">
+          <p className="text-[13px] font-semibold text-red-800 mb-1.5">
             Please fix the following issues:
-          </h4>
-          <ul className="space-y-1">
+          </p>
+          <ul className="space-y-0.5">
             {errors.map((err, i) => (
-              <li key={i} className="flex items-start gap-2 text-sm text-red-700">
+              <li key={i} className="flex items-start gap-1.5 text-[13px] text-red-700">
                 <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
                 {err.message}
               </li>
@@ -584,42 +528,45 @@ export default function EmployeeGoalsPage() {
       )}
 
       {/* Goal cards */}
-      <div className="space-y-4">
+      <div className="space-y-3">
         {goals.map((goal, index) => (
           <div
             key={index}
-            className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden"
+            className="rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden"
           >
-            {/* Goal header */}
-            <div className="flex items-center justify-between bg-gray-50 px-4 py-3 border-b border-gray-100">
+            {/* Goal header - compact */}
+            <div className="flex items-center justify-between bg-gray-50/80 px-3 py-2 border-b border-gray-100">
               <div className="flex items-center gap-2">
-                <GripVertical className="h-4 w-4 text-gray-400" />
-                <span className="text-sm font-semibold text-gray-700">
+                <GripVertical className="h-3.5 w-3.5 text-gray-300" />
+                <span className="text-[13px] font-semibold text-gray-700">
                   Goal {index + 1}
                 </span>
                 {goal.isShared && (
-                  <span className="text-xs rounded-full bg-indigo-100 text-indigo-700 px-2 py-0.5">
-                    Shared
+                  <StatusBadge status="SUBMITTED" className="text-[10px]" />
+                )}
+                {goal.weightage > 0 && (
+                  <span className="text-[11px] text-gray-400 ml-1">
+                    {goal.weightage}% weight
                   </span>
                 )}
               </div>
               {isEditable && goals.length > 1 && (
                 <button
                   onClick={() => removeGoal(index)}
-                  className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-red-600 hover:bg-red-50 transition-colors"
+                  className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] text-red-500 hover:bg-red-50 transition-colors"
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
+                  <Trash2 className="h-3 w-3" />
                   Remove
                 </button>
               )}
             </div>
 
-            {/* Goal form */}
-            <div className="p-4 sm:p-5 space-y-4">
+            {/* Goal form - compact */}
+            <div className="px-3 py-3 space-y-3">
               {/* Row 1: Thrust Area + Title */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1.5">
+                  <label className="block text-[11px] font-medium text-gray-500 uppercase tracking-wide mb-1">
                     Thrust Area <span className="text-red-500">*</span>
                   </label>
                   {isEditable ? (
@@ -629,7 +576,7 @@ export default function EmployeeGoalsPage() {
                         onChange={(e) =>
                           updateGoal(index, "thrustArea", e.target.value)
                         }
-                        className="w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100 pr-8"
+                        className="w-full h-8 appearance-none rounded-lg border border-input bg-transparent px-2.5 text-[13px] text-gray-900 focus:border-ring focus:outline-none focus:ring-3 focus:ring-ring/50 pr-8"
                       >
                         <option value="">Select thrust area</option>
                         {THRUST_AREAS.map((area) => (
@@ -638,31 +585,30 @@ export default function EmployeeGoalsPage() {
                           </option>
                         ))}
                       </select>
-                      <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                      <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
                     </div>
                   ) : (
-                    <p className="text-sm text-gray-900 py-2">
+                    <p className="text-[13px] text-gray-900 py-1.5">
                       {goal.thrustArea || "-"}
                     </p>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1.5">
+                  <label className="block text-[11px] font-medium text-gray-500 uppercase tracking-wide mb-1">
                     Goal Title <span className="text-red-500">*</span>
                   </label>
                   {isEditable && !goal.titleReadOnly ? (
-                    <input
-                      type="text"
+                    <Input
                       value={goal.title}
                       onChange={(e) =>
                         updateGoal(index, "title", e.target.value)
                       }
                       placeholder="Enter goal title"
-                      className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                      className="text-[13px]"
                     />
                   ) : (
-                    <p className="text-sm text-gray-900 py-2">
+                    <p className="text-[13px] text-gray-900 py-1.5">
                       {goal.title || "-"}
                     </p>
                   )}
@@ -671,30 +617,30 @@ export default function EmployeeGoalsPage() {
 
               {/* Row 2: Description */}
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1.5">
+                <label className="block text-[11px] font-medium text-gray-500 uppercase tracking-wide mb-1">
                   Description
                 </label>
                 {isEditable ? (
-                  <textarea
+                  <Textarea
                     value={goal.description}
                     onChange={(e) =>
                       updateGoal(index, "description", e.target.value)
                     }
                     placeholder="Describe the goal in detail (optional)"
                     rows={2}
-                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100 resize-none"
+                    className="text-[13px] min-h-[56px] resize-none"
                   />
                 ) : (
-                  <p className="text-sm text-gray-600 py-2">
+                  <p className="text-[13px] text-gray-600 py-1.5">
                     {goal.description || "No description provided"}
                   </p>
                 )}
               </div>
 
               {/* Row 3: UoM, Target, Weightage */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1.5">
+                  <label className="block text-[11px] font-medium text-gray-500 uppercase tracking-wide mb-1">
                     Unit of Measurement <span className="text-red-500">*</span>
                   </label>
                   {isEditable ? (
@@ -704,7 +650,7 @@ export default function EmployeeGoalsPage() {
                         onChange={(e) =>
                           updateGoal(index, "uomType", e.target.value)
                         }
-                        className="w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100 pr-8"
+                        className="w-full h-8 appearance-none rounded-lg border border-input bg-transparent px-2.5 text-[13px] text-gray-900 focus:border-ring focus:outline-none focus:ring-3 focus:ring-ring/50 pr-8"
                       >
                         {UOM_TYPES.map((uom) => (
                           <option key={uom.value} value={uom.value}>
@@ -712,21 +658,21 @@ export default function EmployeeGoalsPage() {
                           </option>
                         ))}
                       </select>
-                      <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                      <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
                     </div>
                   ) : (
-                    <p className="text-sm text-gray-900 py-2">
+                    <p className="text-[13px] text-gray-900 py-1.5">
                       {getUomLabel(goal.uomType)}
                     </p>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1.5">
+                  <label className="block text-[11px] font-medium text-gray-500 uppercase tracking-wide mb-1">
                     Target <span className="text-red-500">*</span>
                   </label>
                   {isEditable && !goal.targetReadOnly ? (
-                    <input
+                    <Input
                       type={
                         goal.uomType === "TIMELINE" ? "date" : "text"
                       }
@@ -741,21 +687,21 @@ export default function EmployeeGoalsPage() {
                             ? "e.g. 95"
                             : "Enter target value"
                       }
-                      className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                      className="text-[13px]"
                     />
                   ) : (
-                    <p className="text-sm text-gray-900 py-2">
+                    <p className="text-[13px] text-gray-900 py-1.5">
                       {formatTarget(goal.uomType, goal.target)}
                     </p>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1.5">
+                  <label className="block text-[11px] font-medium text-gray-500 uppercase tracking-wide mb-1">
                     Weightage (%) <span className="text-red-500">*</span>
                   </label>
                   {isEditable ? (
-                    <input
+                    <Input
                       type="number"
                       min={0}
                       max={100}
@@ -769,10 +715,10 @@ export default function EmployeeGoalsPage() {
                         )
                       }
                       placeholder="Min 10%"
-                      className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                      className="text-[13px]"
                     />
                   ) : (
-                    <p className="text-sm text-gray-900 py-2">
+                    <p className="text-[13px] text-gray-900 py-1.5">
                       {goal.weightage}%
                     </p>
                   )}
@@ -783,21 +729,21 @@ export default function EmployeeGoalsPage() {
         ))}
       </div>
 
-      {/* Add goal button */}
+      {/* Add goal button - compact text button */}
       {isEditable && goals.length < GOAL_RULES.MAX_GOALS && (
         <button
           onClick={addGoal}
-          className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-300 bg-white py-4 text-sm font-medium text-gray-500 hover:border-indigo-300 hover:text-indigo-600 hover:bg-indigo-50/50 transition-colors"
+          className="flex items-center gap-1 text-[13px] font-medium text-indigo-600 hover:text-indigo-700 transition-colors px-1 py-0.5"
         >
-          <Plus className="h-4 w-4" />
-          Add Goal ({goals.length}/{GOAL_RULES.MAX_GOALS})
+          <Plus className="h-3.5 w-3.5" />
+          Add goal
         </button>
       )}
 
       {/* Bottom action bar (sticky) */}
       {isEditable && (
-        <div className="sticky bottom-0 rounded-xl border border-gray-200 bg-white p-4 shadow-lg flex items-center justify-between">
-          <div className="text-sm text-gray-600">
+        <div className="sticky bottom-0 rounded-lg border border-gray-200 bg-white px-4 py-2.5 shadow-lg flex items-center justify-between">
+          <div className="text-[13px] text-gray-500">
             <span
               className={`font-semibold ${
                 totalWeightage === 100
@@ -807,23 +753,25 @@ export default function EmployeeGoalsPage() {
             >
               {totalWeightage}%
             </span>{" "}
-            total weightage &middot; {goals.length} goal
+            total weightage · {goals.length} goal
             {goals.length !== 1 ? "s" : ""}
           </div>
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
+              size="sm"
               onClick={handleSave}
               disabled={saving || submitting}
             >
-              <Save className="h-4 w-4 mr-1" />
+              <Save className="h-3.5 w-3.5 mr-1" />
               {saving ? "Saving..." : "Save Draft"}
             </Button>
             <Button
+              size="sm"
               onClick={handleSubmit}
               disabled={saving || submitting}
             >
-              <Send className="h-4 w-4 mr-1" />
+              <Send className="h-3.5 w-3.5 mr-1" />
               {submitting ? "Submitting..." : "Submit"}
             </Button>
           </div>

@@ -5,18 +5,31 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
-  FileSpreadsheet,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { StatCard } from "@/components/shared/StatCard";
+import { FilterBar, FilterSelect } from "@/components/shared/FilterBar";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { TableSkeleton } from "@/components/shared/LoadingSkeleton";
+import { PageSkeleton } from "@/components/shared/LoadingSkeleton";
+import {
   Download,
   Loader2,
-  Search,
-  Filter,
   BarChart3,
   TrendingUp,
   Users,
   Target,
   ChevronLeft,
   ChevronRight,
+  FileSpreadsheet,
 } from "lucide-react";
+import { toast } from "sonner";
 
 interface ReportRow {
   employeeId: string;
@@ -42,6 +55,20 @@ interface Cycle {
   id: string;
   name: string;
   status: string;
+}
+
+function scoreColor(score: number | undefined | null): string {
+  if (score == null) return "";
+  if (score >= 80) return "text-emerald-700";
+  if (score >= 50) return "text-amber-700";
+  return "text-red-700";
+}
+
+function scoreBg(score: number | undefined | null): string {
+  if (score == null) return "";
+  if (score >= 80) return "bg-emerald-50";
+  if (score >= 50) return "bg-amber-50";
+  return "bg-red-50";
 }
 
 export default function ReportsPage() {
@@ -122,15 +149,17 @@ export default function ReportsPage() {
         a.download = `report-${cycleFilter}.xlsx`;
         a.click();
         URL.revokeObjectURL(url);
+        toast.success("Report exported");
+      } else {
+        toast.error("Failed to export report");
       }
     } catch {
-      // silent
+      toast.error("Export failed");
     } finally {
       setExporting(false);
     }
   }
 
-  // Client-side search
   const filtered = reports.filter((r) => {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
@@ -145,7 +174,6 @@ export default function ReportsPage() {
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const paged = filtered.slice((page - 1) * pageSize, page * pageSize);
 
-  // Dashboard cards
   const uniqueEmployees = new Set(reports.map((r) => r.employeeId)).size;
   const avgCompletion =
     reports.length > 0
@@ -159,313 +187,241 @@ export default function ReportsPage() {
   ];
 
   if (authStatus === "loading") {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
-      </div>
-    );
+    return <PageSkeleton />;
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            Achievement Reports
-          </h1>
-          <p className="text-sm text-gray-500 mt-1">
-            View achievement data across employees, departments, and quarters
-          </p>
-        </div>
-        <Button
-          onClick={handleExport}
-          disabled={exporting || !cycleFilter}
-          variant="outline"
-        >
-          {exporting ? (
-            <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
-          ) : (
-            <Download className="h-4 w-4 mr-1.5" />
-          )}
-          Export Excel
-        </Button>
+    <div className="space-y-4">
+      <PageHeader
+        breadcrumbs={[
+          { label: "Dashboard", href: "/dashboard" },
+          { label: "Reports" },
+        ]}
+        title="Achievement Reports"
+        subtitle="View achievement data across employees, departments, and quarters"
+        actions={
+          <Button
+            onClick={handleExport}
+            disabled={exporting || !cycleFilter}
+            variant="outline"
+            size="sm"
+          >
+            {exporting ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
+            ) : (
+              <Download className="h-3.5 w-3.5 mr-1" />
+            )}
+            Export Excel
+          </Button>
+        }
+      />
+
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+        <StatCard
+          title="Total Goals"
+          value={reports.length}
+          icon={Target}
+          iconClassName="bg-indigo-100"
+        />
+        <StatCard
+          title="Avg Completion"
+          value={`${avgCompletion}%`}
+          icon={TrendingUp}
+          iconClassName="bg-emerald-100"
+        />
+        <StatCard
+          title="Employees"
+          value={uniqueEmployees}
+          icon={Users}
+          iconClassName="bg-blue-100"
+        />
+        <StatCard
+          title="Departments"
+          value={departments.length}
+          icon={BarChart3}
+          iconClassName="bg-amber-100"
+        />
       </div>
 
-      {/* Dashboard Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-50">
-              <Target className="h-5 w-5 text-indigo-600" />
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-gray-900">
-                {reports.length}
-              </div>
-              <div className="text-xs text-gray-500">Total Goals</div>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-50">
-              <TrendingUp className="h-5 w-5 text-green-600" />
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-gray-900">
-                {avgCompletion}%
-              </div>
-              <div className="text-xs text-gray-500">Avg Completion</div>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50">
-              <Users className="h-5 w-5 text-blue-600" />
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-gray-900">
-                {uniqueEmployees}
-              </div>
-              <div className="text-xs text-gray-500">Employees</div>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-50">
-              <BarChart3 className="h-5 w-5 text-amber-600" />
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-gray-900">
-                {departments.length}
-              </div>
-              <div className="text-xs text-gray-500">Departments</div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <FilterBar
+        searchValue={searchQuery}
+        onSearchChange={(v) => {
+          setSearchQuery(v);
+          setPage(1);
+        }}
+        searchPlaceholder="Search by employee, goal, department..."
+      >
+        <FilterSelect
+          value={cycleFilter}
+          onChange={(v) => {
+            setCycleFilter(v);
+            setPage(1);
+          }}
+          options={cycles.map((c) => ({ value: c.id, label: c.name }))}
+          placeholder="Select Cycle"
+        />
+        <FilterSelect
+          value={departmentFilter}
+          onChange={(v) => {
+            setDepartmentFilter(v);
+            setPage(1);
+          }}
+          options={departments.map((d) => ({ value: d, label: d }))}
+          placeholder="All Departments"
+        />
+        <FilterSelect
+          value={quarterFilter}
+          onChange={(v) => {
+            setQuarterFilter(v);
+            setPage(1);
+          }}
+          options={[
+            { value: "Q1", label: "Q1" },
+            { value: "Q2", label: "Q2" },
+            { value: "Q3", label: "Q3" },
+            { value: "Q4", label: "Q4" },
+          ]}
+          placeholder="All Quarters"
+        />
+      </FilterBar>
 
-      {/* Filters */}
-      <div className="bg-white rounded-xl border border-gray-200 p-4">
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search by employee, goal, department..."
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setPage(1);
-              }}
-              className="block w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none"
-            />
-          </div>
-          <div className="flex gap-2">
-            <select
-              value={cycleFilter}
-              onChange={(e) => {
-                setCycleFilter(e.target.value);
-                setPage(1);
-              }}
-              className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none"
-            >
-              <option value="">Select Cycle</option>
-              {cycles.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-            <select
-              value={departmentFilter}
-              onChange={(e) => {
-                setDepartmentFilter(e.target.value);
-                setPage(1);
-              }}
-              className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none"
-            >
-              <option value="">All Departments</option>
-              {departments.map((d) => (
-                <option key={d} value={d}>
-                  {d}
-                </option>
-              ))}
-            </select>
-            <select
-              value={quarterFilter}
-              onChange={(e) => {
-                setQuarterFilter(e.target.value);
-                setPage(1);
-              }}
-              className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none"
-            >
-              <option value="">All Quarters</option>
-              <option value="Q1">Q1</option>
-              <option value="Q2">Q2</option>
-              <option value="Q3">Q3</option>
-              <option value="Q4">Q4</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      {/* Table */}
       {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
-        </div>
+        <TableSkeleton rows={8} cols={9} />
+      ) : filtered.length === 0 ? (
+        <EmptyState
+          icon={FileSpreadsheet}
+          title="No report data found"
+          description="Select a cycle or adjust filters to view reports."
+        />
       ) : (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-200 bg-gray-50">
-                  <th className="text-left px-4 py-3 font-medium text-gray-600">
-                    Employee
-                  </th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-600">
-                    Department
-                  </th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-600">
-                    Goal
-                  </th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-600">
-                    Target
-                  </th>
-                  <th className="text-center px-4 py-3 font-medium text-gray-600">
-                    Q1
-                  </th>
-                  <th className="text-center px-4 py-3 font-medium text-gray-600">
-                    Q2
-                  </th>
-                  <th className="text-center px-4 py-3 font-medium text-gray-600">
-                    Q3
-                  </th>
-                  <th className="text-center px-4 py-3 font-medium text-gray-600">
-                    Q4
-                  </th>
-                  <th className="text-center px-4 py-3 font-medium text-gray-600">
-                    Avg Score
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {paged.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={9}
-                      className="text-center py-12 text-gray-500"
-                    >
-                      <FileSpreadsheet className="h-10 w-10 text-gray-300 mx-auto mb-3" />
-                      No report data found
-                    </td>
-                  </tr>
-                ) : (
-                  paged.map((row, idx) => (
-                    <tr
-                      key={`${row.employeeId}-${idx}`}
-                      className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
-                    >
-                      <td className="px-4 py-3 font-medium text-gray-900">
-                        {row.employeeName}
-                      </td>
-                      <td className="px-4 py-3 text-gray-700">
-                        {row.department}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div>
-                          <div className="text-gray-900">{row.goalTitle}</div>
-                          <div className="text-xs text-gray-500">
-                            {row.thrustArea}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-gray-700">
-                        {row.target} {row.uomType === "PERCENTAGE" ? "%" : ""}
-                      </td>
-                      {(["q1", "q2", "q3", "q4"] as const).map((q) => {
-                        const score = row[`${q}Score` as keyof ReportRow] as
-                          | number
-                          | undefined;
-                        const actual = row[`${q}Actual` as keyof ReportRow] as
-                          | number
-                          | undefined;
-                        return (
-                          <td key={q} className="px-4 py-3 text-center">
-                            {actual != null ? (
-                              <div>
-                                <div className="font-medium text-gray-900">
-                                  {actual}
-                                </div>
-                                {score != null && (
-                                  <div
-                                    className={`text-xs ${score >= 80 ? "text-green-600" : score >= 50 ? "text-amber-600" : "text-red-600"}`}
-                                  >
-                                    {score.toFixed(0)}%
-                                  </div>
-                                )}
+        <div className="rounded-lg border border-gray-200 bg-white">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-gray-50/80">
+                <TableHead className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold py-2 px-3">
+                  Employee
+                </TableHead>
+                <TableHead className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold py-2 px-3">
+                  Dept
+                </TableHead>
+                <TableHead className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold py-2 px-3">
+                  Goal
+                </TableHead>
+                <TableHead className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold py-2 px-3">
+                  Target
+                </TableHead>
+                <TableHead className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold py-2 px-3 text-center">
+                  Q1
+                </TableHead>
+                <TableHead className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold py-2 px-3 text-center">
+                  Q2
+                </TableHead>
+                <TableHead className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold py-2 px-3 text-center">
+                  Q3
+                </TableHead>
+                <TableHead className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold py-2 px-3 text-center">
+                  Q4
+                </TableHead>
+                <TableHead className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold py-2 px-3 text-center">
+                  Avg
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {paged.map((row, idx) => (
+                <TableRow key={`${row.employeeId}-${idx}`}>
+                  <TableCell className="py-2 px-3 text-[13px] font-medium text-gray-900">
+                    {row.employeeName}
+                  </TableCell>
+                  <TableCell className="py-2 px-3 text-[13px] text-gray-600">
+                    {row.department}
+                  </TableCell>
+                  <TableCell className="py-2 px-3">
+                    <div className="text-[13px] text-gray-900">
+                      {row.goalTitle}
+                    </div>
+                    <div className="text-[11px] text-gray-400">
+                      {row.thrustArea}
+                    </div>
+                  </TableCell>
+                  <TableCell className="py-2 px-3 text-[13px] text-gray-600">
+                    {row.target}
+                    {row.uomType === "PERCENTAGE" ? "%" : ""}
+                  </TableCell>
+                  {(["q1", "q2", "q3", "q4"] as const).map((q) => {
+                    const score = row[`${q}Score` as keyof ReportRow] as
+                      | number
+                      | undefined;
+                    const actual = row[`${q}Actual` as keyof ReportRow] as
+                      | number
+                      | undefined;
+                    return (
+                      <TableCell
+                        key={q}
+                        className="py-2 px-3 text-center"
+                      >
+                        {actual != null ? (
+                          <div>
+                            <div className="text-[13px] font-medium text-gray-900">
+                              {actual}
+                            </div>
+                            {score != null && (
+                              <div
+                                className={`text-[11px] font-medium ${scoreColor(score)}`}
+                              >
+                                {score.toFixed(0)}%
                               </div>
-                            ) : (
-                              <span className="text-gray-300">-</span>
                             )}
-                          </td>
-                        );
-                      })}
-                      <td className="px-4 py-3 text-center">
-                        {row.avgScore != null ? (
-                          <span
-                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold ${
-                              row.avgScore >= 80
-                                ? "bg-green-50 text-green-700"
-                                : row.avgScore >= 50
-                                  ? "bg-amber-50 text-amber-700"
-                                  : "bg-red-50 text-red-700"
-                            }`}
-                          >
-                            {row.avgScore.toFixed(1)}%
-                          </span>
+                          </div>
                         ) : (
                           <span className="text-gray-300">-</span>
                         )}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                      </TableCell>
+                    );
+                  })}
+                  <TableCell className="py-2 px-3 text-center">
+                    {row.avgScore != null ? (
+                      <span
+                        className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold ${scoreBg(row.avgScore)} ${scoreColor(row.avgScore)}`}
+                      >
+                        {row.avgScore.toFixed(1)}%
+                      </span>
+                    ) : (
+                      <span className="text-gray-300">-</span>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
 
-          {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200">
-              <div className="text-sm text-gray-500">
-                Showing {(page - 1) * pageSize + 1}-
+            <div className="flex items-center justify-between px-3 py-2.5 border-t border-gray-200">
+              <div className="text-[11px] text-gray-500">
+                Showing {(page - 1) * pageSize + 1}
+                {" - "}
                 {Math.min(page * pageSize, filtered.length)} of{" "}
                 {filtered.length}
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 <Button
                   variant="outline"
-                  size="icon-sm"
+                  size="icon-xs"
                   disabled={page <= 1}
                   onClick={() => setPage((p) => p - 1)}
                 >
-                  <ChevronLeft className="h-4 w-4" />
+                  <ChevronLeft className="h-3.5 w-3.5" />
                 </Button>
-                <span className="text-sm text-gray-700">
-                  Page {page} of {totalPages}
+                <span className="text-[11px] text-gray-600 px-1">
+                  {page} / {totalPages}
                 </span>
                 <Button
                   variant="outline"
-                  size="icon-sm"
+                  size="icon-xs"
                   disabled={page >= totalPages}
                   onClick={() => setPage((p) => p + 1)}
                 >
-                  <ChevronRight className="h-4 w-4" />
+                  <ChevronRight className="h-3.5 w-3.5" />
                 </Button>
               </div>
             </div>

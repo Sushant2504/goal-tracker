@@ -4,15 +4,29 @@ import { useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
-  Share2,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { StatusBadge } from "@/components/shared/StatusBadge";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { PageSkeleton } from "@/components/shared/LoadingSkeleton";
+import { UserAvatar } from "@/components/shared/UserAvatar";
+import { toast } from "sonner";
+import {
   Plus,
   Loader2,
-  X,
   Users,
   Target,
-  CheckCircle2,
   Search,
+  Share2,
 } from "lucide-react";
 
 interface SharedGoal {
@@ -42,8 +56,7 @@ export default function SharedGoalsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showDialog, setShowDialog] = useState(false);
-  const [error, setError] = useState("");
-  const [successMsg, setSuccessMsg] = useState("");
+  const [formError, setFormError] = useState("");
   const [employeeSearch, setEmployeeSearch] = useState("");
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
   const [form, setForm] = useState({
@@ -71,7 +84,7 @@ export default function SharedGoalsPage() {
         setEmployees(Array.isArray(data) ? data : data.users || []);
       }
     } catch {
-      setError("Failed to load data");
+      toast.error("Failed to load data");
     } finally {
       setLoading(false);
     }
@@ -98,7 +111,7 @@ export default function SharedGoalsPage() {
     });
     setSelectedEmployees([]);
     setEmployeeSearch("");
-    setError("");
+    setFormError("");
     setShowDialog(true);
   }
 
@@ -129,11 +142,11 @@ export default function SharedGoalsPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (selectedEmployees.length === 0) {
-      setError("Please select at least one employee");
+      setFormError("Please select at least one employee");
       return;
     }
     setSaving(true);
-    setError("");
+    setFormError("");
 
     try {
       const res = await fetch("/api/admin/shared-goals", {
@@ -153,11 +166,10 @@ export default function SharedGoalsPage() {
       }
 
       setShowDialog(false);
-      setSuccessMsg("Shared goal created successfully");
-      setTimeout(() => setSuccessMsg(""), 3000);
+      toast.success("Shared goal created successfully");
       fetchData();
     } catch (err: unknown) {
-      setError(
+      setFormError(
         err instanceof Error ? err.message : "Failed to create shared goal"
       );
     } finally {
@@ -166,112 +178,97 @@ export default function SharedGoalsPage() {
   }
 
   if (authStatus === "loading") {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
-      </div>
-    );
+    return <PageSkeleton />;
   }
 
   return (
-    <div className="space-y-6">
-      {/* Success toast */}
-      {successMsg && (
-        <div className="fixed top-4 right-4 z-50 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-in slide-in-from-top">
-          <CheckCircle2 className="h-4 w-4" />
-          {successMsg}
-        </div>
-      )}
-
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Shared Goals</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Create and manage goals that are shared across multiple employees
-          </p>
-        </div>
-        <Button
-          onClick={openCreate}
-          className="bg-indigo-600 text-white hover:bg-indigo-700"
-        >
-          <Plus className="h-4 w-4 mr-1.5" />
-          New Shared Goal
-        </Button>
-      </div>
-
-      {/* Shared Goals List */}
-      {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
-        </div>
-      ) : sharedGoals.length === 0 ? (
-        <div className="text-center py-20 bg-white rounded-xl border border-gray-200">
-          <Share2 className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900">
-            No shared goals yet
-          </h3>
-          <p className="text-gray-500 mt-1">
-            Create a shared goal to assign it to multiple employees
-          </p>
-          <Button
-            onClick={openCreate}
-            className="mt-4 bg-indigo-600 text-white hover:bg-indigo-700"
-          >
-            <Plus className="h-4 w-4 mr-1.5" />
-            Create Shared Goal
+    <div className="space-y-4">
+      <PageHeader
+        breadcrumbs={[
+          { label: "Dashboard", href: "/dashboard" },
+          { label: "Shared Goals" },
+        ]}
+        title="Shared Goals"
+        subtitle="Create and manage goals shared across multiple employees"
+        actions={
+          <Button onClick={openCreate} size="sm">
+            <Plus className="h-3.5 w-3.5 mr-1" />
+            New Shared Goal
           </Button>
-        </div>
+        }
+      />
+
+      {loading ? (
+        <PageSkeleton />
+      ) : sharedGoals.length === 0 ? (
+        <EmptyState
+          icon={Share2}
+          title="No shared goals yet"
+          description="Create a shared goal to assign it to multiple employees."
+          actionLabel="Create Shared Goal"
+          onAction={openCreate}
+        />
       ) : (
-        <div className="grid gap-4">
+        <div className="grid gap-3 md:grid-cols-2">
           {sharedGoals.map((goal) => (
             <div
               key={goal.id}
-              className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-md transition-shadow"
+              className="rounded-lg border border-gray-200 bg-white p-4 hover:shadow-sm transition-shadow"
             >
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-50">
-                    <Target className="h-5 w-5 text-indigo-600" />
+              <div className="flex items-start justify-between mb-2">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-md bg-indigo-50">
+                    <Target className="h-4 w-4 text-indigo-600" />
                   </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-900">
+                  <div className="min-w-0">
+                    <h3 className="text-[13px] font-semibold text-gray-900 truncate">
                       {goal.title}
                     </h3>
-                    <p className="text-xs text-gray-500">
-                      Thrust Area: {goal.thrustArea}
+                    <p className="text-[11px] text-gray-400">
+                      {goal.thrustArea}
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200">
-                    {goal.uomType}
-                  </span>
-                  <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-50 text-gray-600 border border-gray-200">
-                    Target: {goal.target}
-                  </span>
-                  <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
-                    Weight: {goal.weightage}%
-                  </span>
-                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-1.5 mb-2.5">
+                <StatusBadge status={goal.uomType} />
+                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-gray-100 text-gray-600 border border-gray-200">
+                  Target: {goal.target}
+                </span>
+                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                  Weight: {goal.weightage}%
+                </span>
               </div>
 
               {goal.description && (
-                <p className="text-sm text-gray-600 mb-3">
+                <p className="text-[13px] text-gray-500 mb-2.5 line-clamp-2">
                   {goal.description}
                 </p>
               )}
 
-              <div className="flex items-center gap-2 text-sm text-gray-500">
-                <Users className="h-4 w-4" />
-                <span>
+              <div className="flex items-center gap-2 pt-2 border-t border-gray-100">
+                <Users className="h-3.5 w-3.5 text-gray-400" />
+                <span className="text-[11px] text-gray-500">
                   {goal.employees?.length || 0} employee
                   {(goal.employees?.length || 0) !== 1 ? "s" : ""}
                 </span>
                 {goal.employees && goal.employees.length > 0 && (
-                  <span className="text-gray-400">
-                    ({goal.employees.map((e) => e.name).join(", ")})
-                  </span>
+                  <div className="flex -space-x-1.5 ml-1">
+                    {goal.employees.slice(0, 4).map((emp) => (
+                      <UserAvatar
+                        key={emp.id}
+                        name={emp.name}
+                        size="xs"
+                        className="ring-2 ring-white"
+                      />
+                    ))}
+                    {goal.employees.length > 4 && (
+                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-100 text-[10px] font-medium text-gray-600 ring-2 ring-white">
+                        +{goal.employees.length - 4}
+                      </span>
+                    )}
+                  </div>
                 )}
               </div>
             </div>
@@ -279,222 +276,198 @@ export default function SharedGoalsPage() {
         </div>
       )}
 
-      {/* Create Dialog */}
-      {showDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">
-                Create Shared Goal
-              </h2>
-              <button
-                onClick={() => setShowDialog(false)}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
+      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+        <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Create Shared Goal</DialogTitle>
+            <DialogDescription>
+              Define a goal and assign it to multiple employees at once.
+            </DialogDescription>
+          </DialogHeader>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-5">
-              {error && (
-                <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">
-                  {error}
-                </div>
-              )}
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                    Thrust Area
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={form.thrustArea}
-                    onChange={(e) =>
-                      setForm({ ...form, thrustArea: e.target.value })
-                    }
-                    placeholder="e.g., Revenue Growth"
-                    className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                    Title
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={form.title}
-                    onChange={(e) =>
-                      setForm({ ...form, title: e.target.value })
-                    }
-                    placeholder="Goal title"
-                    className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none"
-                  />
-                </div>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {formError && (
+              <div className="rounded-md bg-red-50 border border-red-200 px-3 py-2 text-[13px] text-red-700">
+                {formError}
               </div>
+            )}
 
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  Description
+                <label className="block text-[11px] font-medium text-gray-500 uppercase tracking-wide mb-1">
+                  Thrust Area
                 </label>
-                <textarea
-                  value={form.description}
+                <Input
+                  required
+                  value={form.thrustArea}
                   onChange={(e) =>
-                    setForm({ ...form, description: e.target.value })
+                    setForm({ ...form, thrustArea: e.target.value })
                   }
-                  rows={3}
-                  placeholder="Describe the shared goal..."
-                  className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none resize-none"
+                  placeholder="e.g., Revenue Growth"
                 />
               </div>
-
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                    Unit of Measure
-                  </label>
-                  <select
-                    value={form.uomType}
-                    onChange={(e) =>
-                      setForm({ ...form, uomType: e.target.value })
-                    }
-                    className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none"
-                  >
-                    <option value="PERCENTAGE">Percentage</option>
-                    <option value="NUMBER">Number</option>
-                    <option value="CURRENCY">Currency</option>
-                    <option value="BOOLEAN">Yes/No</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                    Target
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    step="any"
-                    value={form.target}
-                    onChange={(e) =>
-                      setForm({ ...form, target: e.target.value })
-                    }
-                    placeholder="100"
-                    className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                    Weightage (%)
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    min="1"
-                    max="100"
-                    value={form.weightage}
-                    onChange={(e) =>
-                      setForm({ ...form, weightage: e.target.value })
-                    }
-                    placeholder="20"
-                    className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              {/* Employee Selection */}
               <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="block text-sm font-medium text-gray-700">
-                    Assign to Employees ({selectedEmployees.length} selected)
-                  </label>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={selectAll}
-                      className="text-xs text-indigo-600 hover:text-indigo-800"
-                    >
-                      Select All
-                    </button>
-                    <button
-                      type="button"
-                      onClick={deselectAll}
-                      className="text-xs text-gray-500 hover:text-gray-700"
-                    >
-                      Clear
-                    </button>
-                  </div>
-                </div>
-                <div className="relative mb-2">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Search employees..."
-                    value={employeeSearch}
-                    onChange={(e) => setEmployeeSearch(e.target.value)}
-                    className="block w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none"
-                  />
-                </div>
-                <div className="border border-gray-200 rounded-lg max-h-48 overflow-y-auto">
-                  {filteredEmployees.length === 0 ? (
-                    <div className="p-4 text-center text-sm text-gray-500">
-                      No employees found
-                    </div>
-                  ) : (
-                    filteredEmployees.map((emp) => (
-                      <label
-                        key={emp.id}
-                        className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedEmployees.includes(emp.id)}
-                          onChange={() => toggleEmployee(emp.id)}
-                          className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                        />
-                        <div className="min-w-0">
-                          <div className="text-sm font-medium text-gray-900 truncate">
-                            {emp.name}
-                          </div>
-                          <div className="text-xs text-gray-500 truncate">
-                            {emp.email}
-                            {emp.department ? ` - ${emp.department}` : ""}
-                          </div>
-                        </div>
-                      </label>
-                    ))
-                  )}
-                </div>
+                <label className="block text-[11px] font-medium text-gray-500 uppercase tracking-wide mb-1">
+                  Title
+                </label>
+                <Input
+                  required
+                  value={form.title}
+                  onChange={(e) =>
+                    setForm({ ...form, title: e.target.value })
+                  }
+                  placeholder="Goal title"
+                />
               </div>
+            </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setShowDialog(false)}
+            <div>
+              <label className="block text-[11px] font-medium text-gray-500 uppercase tracking-wide mb-1">
+                Description
+              </label>
+              <Textarea
+                value={form.description}
+                onChange={(e) =>
+                  setForm({ ...form, description: e.target.value })
+                }
+                rows={2}
+                placeholder="Describe the shared goal..."
+              />
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="block text-[11px] font-medium text-gray-500 uppercase tracking-wide mb-1">
+                  Unit of Measure
+                </label>
+                <select
+                  value={form.uomType}
+                  onChange={(e) =>
+                    setForm({ ...form, uomType: e.target.value })
+                  }
+                  className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                 >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={saving}
-                  className="bg-indigo-600 text-white hover:bg-indigo-700"
-                >
-                  {saving ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
-                      Creating...
-                    </>
-                  ) : (
-                    "Create Shared Goal"
-                  )}
-                </Button>
+                  <option value="PERCENTAGE">Percentage</option>
+                  <option value="NUMBER">Number</option>
+                  <option value="CURRENCY">Currency</option>
+                  <option value="BOOLEAN">Yes/No</option>
+                </select>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
+              <div>
+                <label className="block text-[11px] font-medium text-gray-500 uppercase tracking-wide mb-1">
+                  Target
+                </label>
+                <Input
+                  type="number"
+                  required
+                  step="any"
+                  value={form.target}
+                  onChange={(e) =>
+                    setForm({ ...form, target: e.target.value })
+                  }
+                  placeholder="100"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-medium text-gray-500 uppercase tracking-wide mb-1">
+                  Weightage (%)
+                </label>
+                <Input
+                  type="number"
+                  required
+                  min={1}
+                  max={100}
+                  value={form.weightage}
+                  onChange={(e) =>
+                    setForm({ ...form, weightage: e.target.value })
+                  }
+                  placeholder="20"
+                />
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">
+                  Assign to Employees ({selectedEmployees.length} selected)
+                </label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={selectAll}
+                    className="text-[11px] text-indigo-600 hover:text-indigo-800 font-medium"
+                  >
+                    Select All
+                  </button>
+                  <button
+                    type="button"
+                    onClick={deselectAll}
+                    className="text-[11px] text-gray-500 hover:text-gray-700 font-medium"
+                  >
+                    Clear
+                  </button>
+                </div>
+              </div>
+              <div className="relative mb-2">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search employees..."
+                  value={employeeSearch}
+                  onChange={(e) => setEmployeeSearch(e.target.value)}
+                  className="w-full rounded-md border border-gray-200 bg-white pl-8 pr-3 py-1.5 text-[13px] text-gray-900 placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-200"
+                />
+              </div>
+              <div className="border border-gray-200 rounded-md max-h-40 overflow-y-auto">
+                {filteredEmployees.length === 0 ? (
+                  <div className="p-3 text-center text-[13px] text-gray-400">
+                    No employees found
+                  </div>
+                ) : (
+                  filteredEmployees.map((emp) => (
+                    <label
+                      key={emp.id}
+                      className="flex items-center gap-2.5 px-3 py-1.5 hover:bg-gray-50 cursor-pointer border-b border-gray-50 last:border-b-0"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedEmployees.includes(emp.id)}
+                        onChange={() => toggleEmployee(emp.id)}
+                        className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                      />
+                      <div className="min-w-0">
+                        <div className="text-[13px] font-medium text-gray-900 truncate">
+                          {emp.name}
+                        </div>
+                        <div className="text-[11px] text-gray-400 truncate">
+                          {emp.email}
+                          {emp.department ? ` - ${emp.department}` : ""}
+                        </div>
+                      </div>
+                    </label>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowDialog(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={saving}>
+                {saving && (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
+                )}
+                Create Shared Goal
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

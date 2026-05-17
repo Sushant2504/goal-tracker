@@ -1,37 +1,33 @@
 "use client";
 
-import { useState, useEffect, useCallback, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { StatusBadge } from "@/components/shared/StatusBadge";
+import { UserAvatar } from "@/components/shared/UserAvatar";
+import { PageSkeleton } from "@/components/shared/LoadingSkeleton";
+import { EmptyState } from "@/components/shared/EmptyState";
 import {
   CheckCircle2,
-  AlertCircle,
   RotateCcw,
   ChevronDown,
-  FileText,
-  Target,
   Edit3,
   Save,
-  ArrowLeft,
-  User,
-  Info,
 } from "lucide-react";
 import { getUomLabel, formatTarget } from "@/lib/scoring";
 import { GOAL_RULES } from "@/lib/validation";
-
-const THRUST_AREAS = [
-  "Product Development",
-  "Quality",
-  "Revenue",
-  "Customer Success",
-  "Operational Excellence",
-  "Cost Optimization",
-  "Safety",
-  "Learning",
-  "Efficiency",
-  "Innovation",
-];
 
 const UOM_TYPES = [
   { value: "MIN_NUMERIC", label: "Numeric (Higher is better)" },
@@ -41,22 +37,6 @@ const UOM_TYPES = [
   { value: "TIMELINE", label: "Timeline" },
   { value: "ZERO", label: "Zero-based" },
 ];
-
-function getStatusBadge(status: string) {
-  const styles: Record<string, string> = {
-    DRAFT: "bg-gray-100 text-gray-700 border-gray-200",
-    SUBMITTED: "bg-yellow-50 text-yellow-700 border-yellow-200",
-    APPROVED: "bg-emerald-50 text-emerald-700 border-emerald-200",
-    RETURNED: "bg-red-50 text-red-700 border-red-200",
-  };
-  return (
-    <span
-      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${styles[status] || styles.DRAFT}`}
-    >
-      {status}
-    </span>
-  );
-}
 
 interface GoalData {
   id: string;
@@ -115,18 +95,6 @@ function ManagerApproveContent() {
   const [selectedSheetId, setSelectedSheetId] = useState<string | null>(
     sheetId
   );
-  const [toast, setToast] = useState<{
-    message: string;
-    type: "success" | "error";
-  } | null>(null);
-
-  const showToast = useCallback(
-    (message: string, type: "success" | "error") => {
-      setToast({ message, type });
-      setTimeout(() => setToast(null), 4000);
-    },
-    []
-  );
 
   // Load submitted sheets if no specific sheetId
   useEffect(() => {
@@ -152,7 +120,6 @@ function ManagerApproveContent() {
         const sheets: GoalSheet[] = await sheetsRes.json();
         setSubmittedSheets(sheets);
 
-        // If we have a sheetId from URL, select it
         if (sheetId && sheets.some((s) => s.id === sheetId)) {
           setSelectedSheetId(sheetId);
         } else if (!sheetId && sheets.length > 0) {
@@ -183,26 +150,28 @@ function ManagerApproveContent() {
         if (!res.ok) throw new Error("Failed to load goal sheet");
         const sheet: GoalSheet = await res.json();
         setGoalSheet(sheet);
-        setEditedGoals(
-          sheet.goals.map((g) => ({ ...g }))
-        );
+        setEditedGoals(sheet.goals.map((g) => ({ ...g })));
       } catch (err) {
         console.error("Load sheet error:", err);
-        showToast("Failed to load goal sheet", "error");
+        toast.error("Failed to load goal sheet");
       } finally {
         setLoading(false);
       }
     }
 
     loadSheet();
-  }, [selectedSheetId, showToast]);
+  }, [selectedSheetId]);
 
   const totalWeightage = editedGoals.reduce(
     (sum, g) => sum + g.weightage,
     0
   );
 
-  function updateGoal(index: number, field: keyof GoalData, value: string | number) {
+  function updateGoal(
+    index: number,
+    field: keyof GoalData,
+    value: string | number
+  ) {
     const updated = [...editedGoals];
     updated[index] = { ...updated[index], [field]: value };
     setEditedGoals(updated);
@@ -237,7 +206,9 @@ function ManagerApproveContent() {
         const data = await res.json();
         throw new Error(
           data.errors
-            ? data.errors.map((e: { message: string }) => e.message).join(", ")
+            ? data.errors
+                .map((e: { message: string }) => e.message)
+                .join(", ")
             : data.error || "Failed to save"
         );
       }
@@ -246,11 +217,11 @@ function ManagerApproveContent() {
       setGoalSheet(updated);
       setEditedGoals(updated.goals.map((g: GoalData) => ({ ...g })));
       setIsEditing(false);
-      showToast("Goals updated successfully", "success");
+      toast.success("Goals updated successfully");
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "Failed to save edits";
-      showToast(message, "error");
+      toast.error(message);
     } finally {
       setSavingEdits(false);
     }
@@ -271,12 +242,10 @@ function ManagerApproveContent() {
         throw new Error(data.error || "Failed to approve");
       }
 
-      showToast("Goal sheet approved successfully!", "success");
-      // Remove from submitted list
+      toast.success("Goal sheet approved successfully!");
       setSubmittedSheets((prev) =>
         prev.filter((s) => s.id !== goalSheet.id)
       );
-      // Move to next or clear
       const remaining = submittedSheets.filter(
         (s) => s.id !== goalSheet.id
       );
@@ -289,7 +258,7 @@ function ManagerApproveContent() {
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "Failed to approve";
-      showToast(message, "error");
+      toast.error(message);
     } finally {
       setProcessing(false);
     }
@@ -297,7 +266,9 @@ function ManagerApproveContent() {
 
   async function handleReturn() {
     if (!goalSheet || !returnComment.trim()) {
-      showToast("Please provide a comment explaining why the goal sheet is being returned.", "error");
+      toast.error(
+        "Please provide a comment explaining why the goal sheet is being returned."
+      );
       return;
     }
     setProcessing(true);
@@ -319,8 +290,7 @@ function ManagerApproveContent() {
 
       setShowReturnDialog(false);
       setReturnComment("");
-      showToast("Goal sheet returned for revision", "success");
-      // Remove from submitted list
+      toast.success("Goal sheet returned for revision");
       setSubmittedSheets((prev) =>
         prev.filter((s) => s.id !== goalSheet.id)
       );
@@ -336,203 +306,162 @@ function ManagerApproveContent() {
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "Failed to return";
-      showToast(message, "error");
+      toast.error(message);
     } finally {
       setProcessing(false);
     }
   }
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-8 w-8 animate-spin rounded-full border-3 border-indigo-200 border-t-indigo-600" />
-          <p className="text-sm text-gray-500">Loading...</p>
-        </div>
-      </div>
-    );
+    return <PageSkeleton />;
   }
 
   if (submittedSheets.length === 0 && !goalSheet) {
     return (
-      <div className="space-y-6 max-w-5xl mx-auto">
-        <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => router.push("/dashboard/manager/team")}
-          >
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            Back to Team
-          </Button>
-        </div>
-        <div className="flex flex-col items-center justify-center py-16">
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-8 text-center max-w-md">
-            <CheckCircle2 className="mx-auto h-10 w-10 text-emerald-500 mb-3" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              All Caught Up!
-            </h3>
-            <p className="text-sm text-gray-600">
-              There are no goal sheets pending your approval at this time.
-            </p>
-          </div>
-        </div>
+      <div className="max-w-5xl mx-auto">
+        <PageHeader
+          breadcrumbs={[
+            { label: "Dashboard", href: "/dashboard" },
+            { label: "Approve Goals" },
+          ]}
+          title="Approve Goals"
+          actions={
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => router.push("/dashboard/manager/team")}
+            >
+              Back to Team
+            </Button>
+          }
+        />
+        <EmptyState
+          icon={CheckCircle2}
+          title="All Caught Up!"
+          description="There are no goal sheets pending your approval at this time."
+          actionLabel="View Team"
+          onAction={() => router.push("/dashboard/manager/team")}
+        />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
-      {/* Toast */}
-      {toast && (
-        <div
-          className={`fixed top-4 right-4 z-50 flex items-center gap-2 rounded-lg border px-4 py-3 shadow-lg ${
-            toast.type === "success"
-              ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-              : "border-red-200 bg-red-50 text-red-800"
-          }`}
-        >
-          {toast.type === "success" ? (
-            <CheckCircle2 className="h-4 w-4" />
-          ) : (
-            <AlertCircle className="h-4 w-4" />
-          )}
-          <span className="text-sm font-medium">{toast.message}</span>
-          <button
-            onClick={() => setToast(null)}
-            className="ml-2 text-current opacity-60 hover:opacity-100"
+    <div className="space-y-4 max-w-5xl mx-auto">
+      <PageHeader
+        breadcrumbs={[
+          { label: "Dashboard", href: "/dashboard" },
+          { label: "Approve Goals" },
+        ]}
+        title="Approve Goals"
+        subtitle={
+          goalSheet
+            ? `Reviewing ${goalSheet.employee.name}'s goal sheet`
+            : `${submittedSheets.length} sheet${submittedSheets.length !== 1 ? "s" : ""} pending approval`
+        }
+        actions={
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => router.push("/dashboard/manager/team")}
           >
-            x
-          </button>
-        </div>
-      )}
+            Back to Team
+          </Button>
+        }
+      />
 
-      {/* Return dialog overlay */}
-      {showReturnDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              Return for Revision
-            </h3>
-            <p className="text-sm text-gray-500 mb-4">
+      {/* Return comment dialog */}
+      <Dialog
+        open={showReturnDialog}
+        onOpenChange={(open) => {
+          setShowReturnDialog(open);
+          if (!open) setReturnComment("");
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Return for Revision</DialogTitle>
+            <DialogDescription>
               Please provide feedback explaining what changes are needed.
               This comment will be visible to the employee.
-            </p>
-            <textarea
-              value={returnComment}
-              onChange={(e) => setReturnComment(e.target.value)}
-              placeholder="Enter your feedback..."
-              rows={4}
-              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100 resize-none mb-4"
-              autoFocus
-            />
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowReturnDialog(false);
-                  setReturnComment("");
-                }}
-                disabled={processing}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={handleReturn}
-                disabled={processing || !returnComment.trim()}
-              >
-                <RotateCcw className="h-4 w-4 mr-1" />
-                {processing ? "Returning..." : "Return for Rework"}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => router.push("/dashboard/manager/team")}
-        >
-          <ArrowLeft className="h-4 w-4 mr-1" />
-          Back
-        </Button>
-        <div className="h-6 w-px bg-gray-200" />
-        <div>
-          <h2 className="text-xl font-bold text-gray-900">
-            Goal Sheet Review
-          </h2>
-          <p className="text-xs text-gray-500">
-            {submittedSheets.length} sheet
-            {submittedSheets.length !== 1 ? "s" : ""} pending approval
-          </p>
-        </div>
-      </div>
-
-      {/* Sheet selector (if multiple) */}
-      {submittedSheets.length > 1 && (
-        <div className="flex gap-2 overflow-x-auto pb-1">
-          {submittedSheets.map((sheet) => (
-            <button
-              key={sheet.id}
+            </DialogDescription>
+          </DialogHeader>
+          <textarea
+            value={returnComment}
+            onChange={(e) => setReturnComment(e.target.value)}
+            placeholder="Enter your feedback..."
+            rows={4}
+            className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-[13px] text-gray-900 placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-200 resize-none"
+            autoFocus
+          />
+          <DialogFooter>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => {
-                setSelectedSheetId(sheet.id);
-                setIsEditing(false);
+                setShowReturnDialog(false);
+                setReturnComment("");
               }}
-              className={`flex items-center gap-2 shrink-0 rounded-lg border px-3 py-2 text-sm transition-colors ${
-                selectedSheetId === sheet.id
-                  ? "border-indigo-300 bg-indigo-50 text-indigo-700"
-                  : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
-              }`}
+              disabled={processing}
             >
-              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-100 text-indigo-700 text-xs font-semibold">
-                {sheet.employee.name
-                  .split(" ")
-                  .map((n) => n[0])
-                  .join("")
-                  .toUpperCase()
-                  .slice(0, 2)}
-              </div>
-              {sheet.employee.name}
-            </button>
-          ))}
-        </div>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleReturn}
+              disabled={processing || !returnComment.trim()}
+            >
+              <RotateCcw className="h-3.5 w-3.5 mr-1" />
+              {processing ? "Returning..." : "Return for Rework"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Sheet selector tabs */}
+      {submittedSheets.length > 1 && (
+        <Tabs
+          value={selectedSheetId || undefined}
+          onValueChange={(value) => {
+            setSelectedSheetId(value as string);
+            setIsEditing(false);
+          }}
+        >
+          <TabsList variant="line">
+            {submittedSheets.map((sheet) => (
+              <TabsTrigger key={sheet.id} value={sheet.id}>
+                <UserAvatar name={sheet.employee.name} size="xs" />
+                <span className="text-[13px]">{sheet.employee.name}</span>
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
       )}
 
       {goalSheet && (
         <>
-          {/* Employee info card */}
-          <div className="rounded-xl border border-gray-200 bg-white p-5">
+          {/* Compact employee info header */}
+          <div className="rounded-lg border border-gray-200 bg-white px-4 py-3">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-indigo-100 text-indigo-700 text-base font-semibold">
-                  {goalSheet.employee.name
-                    .split(" ")
-                    .map((n) => n[0])
-                    .join("")
-                    .toUpperCase()
-                    .slice(0, 2)}
-                </div>
-                <div>
-                  <p className="text-base font-semibold text-gray-900">
-                    {goalSheet.employee.name}
-                  </p>
-                  <p className="text-sm text-gray-500">
+              <div className="flex items-center gap-3">
+                <UserAvatar name={goalSheet.employee.name} size="md" />
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="text-[13px] font-semibold text-gray-900">
+                      {goalSheet.employee.name}
+                    </p>
+                    <StatusBadge status={goalSheet.status} />
+                  </div>
+                  <p className="text-[11px] text-gray-500">
                     {goalSheet.employee.email}
                     {goalSheet.employee.department &&
                       ` · ${goalSheet.employee.department}`}
-                  </p>
-                  <div className="flex items-center gap-2 mt-1">
-                    {getStatusBadge(goalSheet.status)}
-                    <span className="text-xs text-gray-400">
-                      {goalSheet.cycle.name}
-                    </span>
+                    {" · "}
+                    {goalSheet.cycle.name}
                     {goalSheet.submittedAt && (
-                      <span className="text-xs text-gray-400">
-                        · Submitted{" "}
+                      <>
+                        {" · Submitted "}
                         {new Date(
                           goalSheet.submittedAt
                         ).toLocaleDateString("en-US", {
@@ -540,9 +469,9 @@ function ManagerApproveContent() {
                           day: "numeric",
                           year: "numeric",
                         })}
-                      </span>
+                      </>
                     )}
-                  </div>
+                  </p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -585,13 +514,13 @@ function ManagerApproveContent() {
           </div>
 
           {/* Weightage summary */}
-          <div className="rounded-xl border border-gray-200 bg-white p-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-700">
+          <div className="rounded-lg border border-gray-200 bg-white px-4 py-3">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-[13px] font-medium text-gray-700">
                 Total Weightage
               </span>
               <span
-                className={`text-sm font-bold ${
+                className={`text-[13px] font-bold ${
                   totalWeightage === 100
                     ? "text-emerald-600"
                     : "text-red-600"
@@ -600,7 +529,7 @@ function ManagerApproveContent() {
                 {totalWeightage}% / 100%
               </span>
             </div>
-            <div className="h-2 rounded-full bg-gray-100 overflow-hidden">
+            <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
               <div
                 className={`h-full rounded-full transition-all ${
                   totalWeightage === 100
@@ -612,49 +541,46 @@ function ManagerApproveContent() {
                 }}
               />
             </div>
-            <p className="text-xs text-gray-500 mt-1.5">
-              {editedGoals.length} goals &middot; Min{" "}
-              {GOAL_RULES.MIN_WEIGHTAGE}% per goal &middot; Max{" "}
-              {GOAL_RULES.MAX_GOALS} goals
+            <p className="text-[11px] text-gray-500 mt-1">
+              {editedGoals.length} goals · Min {GOAL_RULES.MIN_WEIGHTAGE}%
+              per goal · Max {GOAL_RULES.MAX_GOALS} goals
             </p>
           </div>
 
-          {/* Goals */}
-          <div className="space-y-3">
+          {/* Goals list */}
+          <div className="space-y-2">
             {(isEditing ? editedGoals : goalSheet.goals)
               .sort((a, b) => a.sortOrder - b.sortOrder)
               .map((goal, index) => (
                 <div
                   key={goal.id || index}
-                  className="rounded-xl border border-gray-200 bg-white overflow-hidden"
+                  className="rounded-lg border border-gray-200 bg-white overflow-hidden"
                 >
-                  <div className="flex items-center justify-between bg-gray-50 px-4 py-2.5 border-b border-gray-100">
-                    <span className="text-sm font-semibold text-gray-700">
+                  <div className="flex items-center justify-between bg-gray-50 px-3 py-2 border-b border-gray-100">
+                    <span className="text-[13px] font-semibold text-gray-700">
                       Goal {index + 1}
                     </span>
                     <div className="flex items-center gap-2">
-                      <span className="text-xs rounded-full bg-indigo-100 text-indigo-700 px-2 py-0.5">
+                      <span className="text-[11px] rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200 px-1.5 py-0.5 font-medium">
                         {goal.thrustArea}
                       </span>
-                      <span className="text-xs text-gray-500">
+                      <span className="text-[11px] text-gray-500">
                         {goal.weightage}% weight
                       </span>
                     </div>
                   </div>
 
-                  <div className="p-4 space-y-3">
+                  <div className="p-3 space-y-2.5">
                     {isEditing ? (
                       <>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                           <div>
-                            <label className="block text-xs font-medium text-gray-600 mb-1">
+                            <label className="block text-[11px] font-medium text-gray-600 mb-1">
                               Title
                             </label>
                             <input
                               type="text"
-                              value={
-                                editedGoals[index]?.title || ""
-                              }
+                              value={editedGoals[index]?.title || ""}
                               onChange={(e) =>
                                 updateGoal(
                                   index,
@@ -663,11 +589,11 @@ function ManagerApproveContent() {
                                 )
                               }
                               disabled={goal.titleReadOnly}
-                              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm disabled:bg-gray-50 disabled:text-gray-500 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                              className="w-full rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-[13px] disabled:bg-gray-50 disabled:text-gray-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-200"
                             />
                           </div>
                           <div>
-                            <label className="block text-xs font-medium text-gray-600 mb-1">
+                            <label className="block text-[11px] font-medium text-gray-600 mb-1">
                               Target
                             </label>
                             <input
@@ -676,9 +602,7 @@ function ManagerApproveContent() {
                                   ? "date"
                                   : "text"
                               }
-                              value={
-                                editedGoals[index]?.target || ""
-                              }
+                              value={editedGoals[index]?.target || ""}
                               onChange={(e) =>
                                 updateGoal(
                                   index,
@@ -687,13 +611,13 @@ function ManagerApproveContent() {
                                 )
                               }
                               disabled={goal.targetReadOnly}
-                              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm disabled:bg-gray-50 disabled:text-gray-500 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                              className="w-full rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-[13px] disabled:bg-gray-50 disabled:text-gray-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-200"
                             />
                           </div>
                         </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                           <div>
-                            <label className="block text-xs font-medium text-gray-600 mb-1">
+                            <label className="block text-[11px] font-medium text-gray-600 mb-1">
                               UoM Type
                             </label>
                             <div className="relative">
@@ -709,22 +633,19 @@ function ManagerApproveContent() {
                                     e.target.value
                                   )
                                 }
-                                className="w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100 pr-8"
+                                className="w-full appearance-none rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-[13px] focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-200 pr-8"
                               >
                                 {UOM_TYPES.map((u) => (
-                                  <option
-                                    key={u.value}
-                                    value={u.value}
-                                  >
+                                  <option key={u.value} value={u.value}>
                                     {u.label}
                                   </option>
                                 ))}
                               </select>
-                              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
                             </div>
                           </div>
                           <div>
-                            <label className="block text-xs font-medium text-gray-600 mb-1">
+                            <label className="block text-[11px] font-medium text-gray-600 mb-1">
                               Weightage (%)
                             </label>
                             <input
@@ -742,7 +663,7 @@ function ManagerApproveContent() {
                                   parseInt(e.target.value) || 0
                                 )
                               }
-                              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                              className="w-full rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-[13px] focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-200"
                             />
                           </div>
                         </div>
@@ -750,30 +671,30 @@ function ManagerApproveContent() {
                     ) : (
                       <>
                         <div>
-                          <h4 className="text-sm font-medium text-gray-900">
+                          <h4 className="text-[13px] font-medium text-gray-900">
                             {goal.title}
                           </h4>
                           {goal.description && (
-                            <p className="text-sm text-gray-500 mt-1">
+                            <p className="text-[13px] text-gray-500 mt-0.5">
                               {goal.description}
                             </p>
                           )}
                         </div>
-                        <div className="flex items-center gap-4 text-sm text-gray-600">
+                        <div className="flex items-center gap-4 text-[13px] text-gray-600">
                           <span>
-                            <span className="text-xs text-gray-400">
+                            <span className="text-[11px] text-gray-400">
                               UoM:{" "}
                             </span>
                             {getUomLabel(goal.uomType)}
                           </span>
                           <span>
-                            <span className="text-xs text-gray-400">
+                            <span className="text-[11px] text-gray-400">
                               Target:{" "}
                             </span>
                             {formatTarget(goal.uomType, goal.target)}
                           </span>
                           <span>
-                            <span className="text-xs text-gray-400">
+                            <span className="text-[11px] text-gray-400">
                               Weight:{" "}
                             </span>
                             {goal.weightage}%
@@ -788,24 +709,26 @@ function ManagerApproveContent() {
 
           {/* Action buttons */}
           {goalSheet.status === "SUBMITTED" && !isEditing && (
-            <div className="sticky bottom-0 rounded-xl border border-gray-200 bg-white p-4 shadow-lg flex items-center justify-between">
-              <p className="text-sm text-gray-600">
+            <div className="sticky bottom-0 rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-lg flex items-center justify-between">
+              <p className="text-[13px] text-gray-600">
                 Review complete? Choose an action below.
               </p>
               <div className="flex items-center gap-2">
                 <Button
                   variant="destructive"
+                  size="sm"
                   onClick={() => setShowReturnDialog(true)}
                   disabled={processing}
                 >
-                  <RotateCcw className="h-4 w-4 mr-1" />
+                  <RotateCcw className="h-3.5 w-3.5 mr-1" />
                   Return for Rework
                 </Button>
                 <Button
+                  size="sm"
                   onClick={handleApprove}
                   disabled={processing}
                 >
-                  <CheckCircle2 className="h-4 w-4 mr-1" />
+                  <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
                   {processing ? "Processing..." : "Approve Goals"}
                 </Button>
               </div>
@@ -819,13 +742,7 @@ function ManagerApproveContent() {
 
 export default function ManagerApprovePage() {
   return (
-    <Suspense
-      fallback={
-        <div className="flex items-center justify-center py-20">
-          <div className="h-8 w-8 animate-spin rounded-full border-3 border-indigo-200 border-t-indigo-600" />
-        </div>
-      }
-    >
+    <Suspense fallback={<PageSkeleton />}>
       <ManagerApproveContent />
     </Suspense>
   );

@@ -4,7 +4,12 @@ import { useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Sidebar, MobileSidebar } from "@/components/layout/Sidebar";
-import { Menu, Bell } from "lucide-react";
+import { NotificationsDropdown } from "@/components/layout/NotificationsDropdown";
+import { UserProfileDropdown } from "@/components/layout/UserProfileDropdown";
+import { ThemeToggle } from "@/components/layout/ThemeToggle";
+import { CommandPalette } from "@/components/layout/CommandPalette";
+import { KeyboardShortcutsDialog } from "@/components/layout/KeyboardShortcutsDialog";
+import { Menu, Search } from "lucide-react";
 
 export default function DashboardLayout({
   children,
@@ -19,10 +24,7 @@ export default function DashboardLayout({
   if (status === "loading") {
     return (
       <div className="flex h-screen items-center justify-center bg-gray-50">
-        <div className="flex flex-col items-center gap-4">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-indigo-200 border-t-indigo-600" />
-          <p className="text-sm text-gray-500">Loading...</p>
-        </div>
+        <div className="h-8 w-8 animate-spin rounded-full border-3 border-indigo-200 border-t-indigo-600" />
       </div>
     );
   }
@@ -33,8 +35,7 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50">
-      {/* Desktop sidebar */}
+    <div className="flex h-screen overflow-hidden bg-gray-50/80">
       <div className="hidden lg:flex">
         <Sidebar
           collapsed={sidebarCollapsed}
@@ -42,73 +43,49 @@ export default function DashboardLayout({
         />
       </div>
 
-      {/* Mobile sidebar */}
       <MobileSidebar open={mobileOpen} onClose={() => setMobileOpen(false)} />
 
-      {/* Main content area */}
       <div className="flex flex-1 flex-col overflow-hidden min-w-0">
-        {/* Top header bar */}
-        <header className="flex h-16 items-center justify-between border-b border-gray-200 bg-white px-4 sm:px-6 shrink-0">
-          <div className="flex items-center gap-3">
+        <header className="flex h-12 items-center justify-between border-b border-gray-200/80 bg-white px-4 sm:px-5 shrink-0">
+          <div className="flex items-center gap-2">
             <button
               onClick={() => setMobileOpen(true)}
-              className="lg:hidden flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
+              className="lg:hidden flex h-8 w-8 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
               aria-label="Open navigation"
             >
-              <Menu className="h-5 w-5" />
+              <Menu className="h-4.5 w-4.5" />
             </button>
-            <div>
-              <h1 className="text-lg font-semibold text-gray-900">
-                {getGreeting()}, {session?.user?.name?.split(" ")[0] || "User"}
-              </h1>
-              <p className="text-xs text-gray-500 hidden sm:block">
-                {session?.user?.department
-                  ? `${session.user.department} Department`
-                  : "Welcome to GoalTracker"}
-              </p>
-            </div>
+            <span className="text-[13px] font-medium text-gray-700">
+              {session?.user?.department || "GoalTracker"}
+            </span>
           </div>
 
           <div className="flex items-center gap-2">
             <button
-              onClick={() => router.push("/dashboard/notifications")}
-              className="relative flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
-              aria-label="Notifications"
+              className="hidden sm:flex items-center gap-1.5 rounded-md border border-gray-200 px-2.5 py-1 text-[12px] text-gray-400 hover:bg-gray-50"
+              onClick={() =>
+                window.dispatchEvent(new Event("open-command-palette"))
+              }
             >
-              <Bell className="h-5 w-5" />
+              <Search className="h-3 w-3" />
+              <span>Search...</span>
+              <kbd className="text-[10px] bg-gray-100 px-1 py-0.5 rounded">
+                ⌘K
+              </kbd>
             </button>
-
-            <div className="hidden sm:flex items-center gap-2 ml-2 pl-3 border-l border-gray-200">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100 text-indigo-700 text-xs font-semibold">
-                {(session?.user?.name || "U")
-                  .split(" ")
-                  .map((n) => n[0])
-                  .join("")
-                  .toUpperCase()
-                  .slice(0, 2)}
-              </div>
-              <div className="text-right">
-                <p className="text-sm font-medium text-gray-900">
-                  {session?.user?.name}
-                </p>
-                <p className="text-xs text-gray-500">{session?.user?.email}</p>
-              </div>
-            </div>
+            <ThemeToggle />
+            <NotificationsDropdown />
+            <UserProfileDropdown />
           </div>
         </header>
 
-        {/* Page content */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+        <main className="flex-1 overflow-y-auto px-4 sm:px-5 lg:px-6 py-4">
           {children}
         </main>
       </div>
+
+      <CommandPalette />
+      <KeyboardShortcutsDialog />
     </div>
   );
-}
-
-function getGreeting(): string {
-  const hour = new Date().getHours();
-  if (hour < 12) return "Good morning";
-  if (hour < 17) return "Good afternoon";
-  return "Good evening";
 }

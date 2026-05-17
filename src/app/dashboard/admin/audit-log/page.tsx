@@ -5,17 +5,32 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { StatusBadge } from "@/components/shared/StatusBadge";
+import { FilterBar, FilterSelect } from "@/components/shared/FilterBar";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { TableSkeleton } from "@/components/shared/LoadingSkeleton";
+import { PageSkeleton } from "@/components/shared/LoadingSkeleton";
+import {
   ScrollText,
-  Search,
-  Loader2,
   ChevronLeft,
   ChevronRight,
-  Filter,
-  Clock,
-  User,
-  FileText,
   Eye,
-  X,
+  Search,
 } from "lucide-react";
 
 interface AuditEntry {
@@ -48,16 +63,6 @@ const ENTITY_TYPES = [
   "Escalation",
   "AppSettings",
 ];
-
-const ACTION_COLORS: Record<string, string> = {
-  CREATE: "bg-green-50 text-green-700 border-green-200",
-  UPDATE: "bg-blue-50 text-blue-700 border-blue-200",
-  DELETE: "bg-red-50 text-red-700 border-red-200",
-  APPROVE: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  RETURN: "bg-amber-50 text-amber-700 border-amber-200",
-  SUBMIT: "bg-indigo-50 text-indigo-700 border-indigo-200",
-  LOGIN: "bg-purple-50 text-purple-700 border-purple-200",
-};
 
 export default function AuditLogPage() {
   const { data: session, status: authStatus } = useSession();
@@ -132,194 +137,137 @@ export default function AuditLogPage() {
   }
 
   if (authStatus === "loading") {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
-      </div>
-    );
+    return <PageSkeleton />;
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Audit Log</h1>
-        <p className="text-sm text-gray-500 mt-1">
-          Track all actions and changes across the system
-        </p>
-      </div>
+    <div className="space-y-4">
+      <PageHeader
+        breadcrumbs={[
+          { label: "Dashboard", href: "/dashboard" },
+          { label: "Audit Log" },
+        ]}
+        title="Audit Log"
+        subtitle="Track all actions and changes across the system"
+      />
 
-      {/* Filters */}
-      <div className="bg-white rounded-xl border border-gray-200 p-4">
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search by user, action, or entity..."
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setPage(1);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") fetchLogs();
-              }}
-              className="block w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none"
-            />
-          </div>
-          <div className="relative">
-            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <select
-              value={entityTypeFilter}
-              onChange={(e) => {
-                setEntityTypeFilter(e.target.value);
-                setPage(1);
-              }}
-              className="rounded-lg border border-gray-300 bg-white pl-9 pr-8 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none appearance-none"
-            >
-              <option value="">All Entity Types</option>
-              {ENTITY_TYPES.map((et) => (
-                <option key={et} value={et}>
-                  {et}
-                </option>
-              ))}
-            </select>
-          </div>
-          <Button variant="outline" onClick={fetchLogs}>
-            <Search className="h-4 w-4 mr-1.5" />
-            Search
-          </Button>
-        </div>
-      </div>
+      <FilterBar
+        searchValue={searchQuery}
+        onSearchChange={(v) => {
+          setSearchQuery(v);
+          setPage(1);
+        }}
+        searchPlaceholder="Search by user, action, or entity..."
+      >
+        <FilterSelect
+          value={entityTypeFilter}
+          onChange={(v) => {
+            setEntityTypeFilter(v);
+            setPage(1);
+          }}
+          options={ENTITY_TYPES.map((et) => ({ value: et, label: et }))}
+          placeholder="All Entity Types"
+        />
+        <Button variant="outline" size="sm" onClick={fetchLogs}>
+          <Search className="h-3.5 w-3.5 mr-1" />
+          Search
+        </Button>
+      </FilterBar>
 
-      {/* Log Table */}
       {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
-        </div>
+        <TableSkeleton rows={10} cols={6} />
+      ) : logs.length === 0 ? (
+        <EmptyState
+          icon={ScrollText}
+          title="No audit log entries found"
+          description="Adjust your search or filter criteria."
+        />
       ) : (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-200 bg-gray-50">
-                  <th className="text-left px-4 py-3 font-medium text-gray-600">
-                    <div className="flex items-center gap-1.5">
-                      <Clock className="h-3.5 w-3.5" />
-                      Timestamp
+        <div className="rounded-lg border border-gray-200 bg-white">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-gray-50/80">
+                <TableHead className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold py-2 px-3">
+                  Timestamp
+                </TableHead>
+                <TableHead className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold py-2 px-3">
+                  User
+                </TableHead>
+                <TableHead className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold py-2 px-3">
+                  Action
+                </TableHead>
+                <TableHead className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold py-2 px-3">
+                  Entity
+                </TableHead>
+                <TableHead className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold py-2 px-3">
+                  Entity ID
+                </TableHead>
+                <TableHead className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold py-2 px-3 w-10" />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {logs.map((entry) => (
+                <TableRow key={entry.id}>
+                  <TableCell className="py-2 px-3 text-[13px] text-gray-600 whitespace-nowrap">
+                    {formatTimestamp(entry.timestamp)}
+                  </TableCell>
+                  <TableCell className="py-2 px-3">
+                    <div className="text-[13px] font-medium text-gray-900">
+                      {entry.user?.name || "System"}
                     </div>
-                  </th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-600">
-                    <div className="flex items-center gap-1.5">
-                      <User className="h-3.5 w-3.5" />
-                      User
+                    <div className="text-[11px] text-gray-400">
+                      {entry.user?.email || entry.userId}
                     </div>
-                  </th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-600">
-                    Action
-                  </th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-600">
-                    <div className="flex items-center gap-1.5">
-                      <FileText className="h-3.5 w-3.5" />
-                      Entity
-                    </div>
-                  </th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-600">
-                    Entity ID
-                  </th>
-                  <th className="text-center px-4 py-3 font-medium text-gray-600">
-                    Details
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {logs.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={6}
-                      className="text-center py-12 text-gray-500"
+                  </TableCell>
+                  <TableCell className="py-2 px-3">
+                    <StatusBadge status={entry.action} />
+                  </TableCell>
+                  <TableCell className="py-2 px-3">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-gray-100 text-gray-700">
+                      {entry.entityType}
+                    </span>
+                  </TableCell>
+                  <TableCell className="py-2 px-3 text-[11px] text-gray-400 font-mono">
+                    {entry.entityId?.slice(0, 8)}...
+                  </TableCell>
+                  <TableCell className="py-2 px-3">
+                    <Button
+                      variant="ghost"
+                      size="icon-xs"
+                      onClick={() => setDetailEntry(entry)}
                     >
-                      <ScrollText className="h-10 w-10 text-gray-300 mx-auto mb-3" />
-                      No audit log entries found
-                    </td>
-                  </tr>
-                ) : (
-                  logs.map((entry) => (
-                    <tr
-                      key={entry.id}
-                      className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
-                    >
-                      <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
-                        {formatTimestamp(entry.timestamp)}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="font-medium text-gray-900">
-                          {entry.user?.name || "System"}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {entry.user?.email || entry.userId}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${
-                            ACTION_COLORS[entry.action] ||
-                            "bg-gray-50 text-gray-600 border-gray-200"
-                          }`}
-                        >
-                          {entry.action}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700">
-                          {entry.entityType}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-gray-500 font-mono text-xs">
-                        {entry.entityId?.slice(0, 8)}...
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <Button
-                          variant="ghost"
-                          size="icon-xs"
-                          onClick={() => setDetailEntry(entry)}
-                        >
-                          <Eye className="h-3.5 w-3.5" />
-                        </Button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                      <Eye className="h-3.5 w-3.5" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
 
-          {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200">
-              <div className="text-sm text-gray-500">
+            <div className="flex items-center justify-between px-3 py-2.5 border-t border-gray-200">
+              <div className="text-[11px] text-gray-500">
                 Page {page} of {totalPages} ({total} entries)
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 <Button
                   variant="outline"
-                  size="icon-sm"
+                  size="icon-xs"
                   disabled={page <= 1}
                   onClick={() => setPage((p) => p - 1)}
                 >
-                  <ChevronLeft className="h-4 w-4" />
+                  <ChevronLeft className="h-3.5 w-3.5" />
                 </Button>
-                <span className="text-sm text-gray-700">
+                <span className="text-[11px] text-gray-600 px-1">
                   {page} / {totalPages}
                 </span>
                 <Button
                   variant="outline"
-                  size="icon-sm"
+                  size="icon-xs"
                   disabled={page >= totalPages}
                   onClick={() => setPage((p) => p + 1)}
                 >
-                  <ChevronRight className="h-4 w-4" />
+                  <ChevronRight className="h-3.5 w-3.5" />
                 </Button>
               </div>
             </div>
@@ -327,93 +275,93 @@ export default function AuditLogPage() {
         </div>
       )}
 
-      {/* Detail Dialog */}
-      {detailEntry && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-xl mx-4 max-h-[80vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">
-                Audit Log Detail
-              </h2>
-              <button
-                onClick={() => setDetailEntry(null)}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+      {/* Detail Sheet (slide-in from right) */}
+      <Sheet
+        open={detailEntry !== null}
+        onOpenChange={(open) => {
+          if (!open) setDetailEntry(null);
+        }}
+      >
+        <SheetContent side="right" className="sm:max-w-md overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>Audit Log Detail</SheetTitle>
+            <SheetDescription>
+              Detailed view of this audit log entry.
+            </SheetDescription>
+          </SheetHeader>
+
+          {detailEntry && (
+            <div className="px-4 pb-4 space-y-4">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <div className="text-xs font-medium text-gray-500 mb-1">
+                  <div className="text-[11px] font-medium text-gray-400 uppercase tracking-wide mb-0.5">
                     Timestamp
                   </div>
-                  <div className="text-sm text-gray-900">
+                  <div className="text-[13px] text-gray-900">
                     {formatTimestamp(detailEntry.timestamp)}
                   </div>
                 </div>
                 <div>
-                  <div className="text-xs font-medium text-gray-500 mb-1">
+                  <div className="text-[11px] font-medium text-gray-400 uppercase tracking-wide mb-0.5">
                     User
                   </div>
-                  <div className="text-sm text-gray-900">
+                  <div className="text-[13px] text-gray-900">
                     {detailEntry.user?.name || "System"}
                   </div>
+                  <div className="text-[11px] text-gray-400">
+                    {detailEntry.user?.email || ""}
+                  </div>
                 </div>
                 <div>
-                  <div className="text-xs font-medium text-gray-500 mb-1">
+                  <div className="text-[11px] font-medium text-gray-400 uppercase tracking-wide mb-0.5">
                     Action
                   </div>
-                  <span
-                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${
-                      ACTION_COLORS[detailEntry.action] ||
-                      "bg-gray-50 text-gray-600 border-gray-200"
-                    }`}
-                  >
-                    {detailEntry.action}
-                  </span>
+                  <StatusBadge status={detailEntry.action} />
                 </div>
                 <div>
-                  <div className="text-xs font-medium text-gray-500 mb-1">
+                  <div className="text-[11px] font-medium text-gray-400 uppercase tracking-wide mb-0.5">
                     Entity
                   </div>
-                  <div className="text-sm text-gray-900">
+                  <div className="text-[13px] text-gray-900">
                     {detailEntry.entityType}
                   </div>
                 </div>
               </div>
+
               <div>
-                <div className="text-xs font-medium text-gray-500 mb-1">
+                <div className="text-[11px] font-medium text-gray-400 uppercase tracking-wide mb-0.5">
                   Entity ID
                 </div>
-                <div className="text-sm font-mono text-gray-700 bg-gray-50 rounded px-2 py-1">
+                <div className="text-[12px] font-mono text-gray-700 bg-gray-50 rounded-md px-2.5 py-1.5">
                   {detailEntry.entityId}
                 </div>
               </div>
+
               {detailEntry.previousValue && (
                 <div>
-                  <div className="text-xs font-medium text-gray-500 mb-1">
+                  <div className="text-[11px] font-medium text-gray-400 uppercase tracking-wide mb-0.5">
                     Previous Value
                   </div>
-                  <pre className="text-xs text-gray-700 bg-red-50 border border-red-100 rounded-lg p-3 overflow-x-auto whitespace-pre-wrap">
+                  <pre className="text-[11px] text-gray-700 bg-red-50 border border-red-100 rounded-md p-2.5 overflow-x-auto whitespace-pre-wrap max-h-48">
                     {formatJson(detailEntry.previousValue)}
                   </pre>
                 </div>
               )}
+
               {detailEntry.newValue && (
                 <div>
-                  <div className="text-xs font-medium text-gray-500 mb-1">
+                  <div className="text-[11px] font-medium text-gray-400 uppercase tracking-wide mb-0.5">
                     New Value
                   </div>
-                  <pre className="text-xs text-gray-700 bg-green-50 border border-green-100 rounded-lg p-3 overflow-x-auto whitespace-pre-wrap">
+                  <pre className="text-[11px] text-gray-700 bg-green-50 border border-green-100 rounded-md p-2.5 overflow-x-auto whitespace-pre-wrap max-h-48">
                     {formatJson(detailEntry.newValue)}
                   </pre>
                 </div>
               )}
             </div>
-          </div>
-        </div>
-      )}
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

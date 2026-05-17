@@ -4,15 +4,25 @@ import { useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { StatusBadge } from "@/components/shared/StatusBadge";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { PageSkeleton } from "@/components/shared/LoadingSkeleton";
+import { toast } from "sonner";
 import {
   CalendarDays,
   Plus,
   Pencil,
   Loader2,
-  X,
-  CheckCircle2,
-  Clock,
-  Archive,
 } from "lucide-react";
 
 interface GoalCycle {
@@ -52,6 +62,15 @@ function toInputDate(iso: string) {
   return iso.slice(0, 10);
 }
 
+function formatDate(iso: string) {
+  if (!iso) return "-";
+  return new Date(iso).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
 export default function CyclesPage() {
   const { data: session, status: authStatus } = useSession();
   const router = useRouter();
@@ -61,7 +80,7 @@ export default function CyclesPage() {
   const [showDialog, setShowDialog] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
-  const [error, setError] = useState("");
+  const [formError, setFormError] = useState("");
 
   const fetchCycles = useCallback(async () => {
     setLoading(true);
@@ -72,7 +91,7 @@ export default function CyclesPage() {
         setCycles(data);
       }
     } catch {
-      setError("Failed to load cycles");
+      toast.error("Failed to load cycles");
     } finally {
       setLoading(false);
     }
@@ -91,7 +110,7 @@ export default function CyclesPage() {
   function openCreate() {
     setEditingId(null);
     setForm(emptyForm);
-    setError("");
+    setFormError("");
     setShowDialog(true);
   }
 
@@ -111,14 +130,14 @@ export default function CyclesPage() {
       q4Closes: toInputDate(cycle.q4Closes),
       status: cycle.status,
     });
-    setError("");
+    setFormError("");
     setShowDialog(true);
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
-    setError("");
+    setFormError("");
 
     try {
       const method = editingId ? "PUT" : "POST";
@@ -135,9 +154,10 @@ export default function CyclesPage() {
       }
 
       setShowDialog(false);
+      toast.success(editingId ? "Cycle updated" : "Cycle created");
       fetchCycles();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to save cycle");
+      setFormError(err instanceof Error ? err.message : "Failed to save cycle");
     } finally {
       setSaving(false);
     }
@@ -147,138 +167,94 @@ export default function CyclesPage() {
     setForm((prev) => ({ ...prev, [field]: value }));
   }
 
-  const statusIcon = (status: string) => {
-    switch (status) {
-      case "ACTIVE":
-        return <CheckCircle2 className="h-4 w-4 text-green-600" />;
-      case "DRAFT":
-        return <Clock className="h-4 w-4 text-amber-500" />;
-      case "CLOSED":
-        return <Archive className="h-4 w-4 text-gray-500" />;
-      default:
-        return null;
-    }
-  };
-
-  const statusBadgeClass = (status: string) => {
-    switch (status) {
-      case "ACTIVE":
-        return "bg-green-50 text-green-700 border-green-200";
-      case "DRAFT":
-        return "bg-amber-50 text-amber-700 border-amber-200";
-      case "CLOSED":
-        return "bg-gray-100 text-gray-600 border-gray-200";
-      default:
-        return "bg-gray-100 text-gray-600 border-gray-200";
-    }
-  };
-
   if (authStatus === "loading") {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
-      </div>
-    );
+    return <PageSkeleton />;
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Goal Cycles</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Manage performance review cycles and their quarterly windows
-          </p>
-        </div>
-        <Button
-          onClick={openCreate}
-          className="bg-indigo-600 text-white hover:bg-indigo-700"
-        >
-          <Plus className="h-4 w-4 mr-1.5" />
-          New Cycle
-        </Button>
-      </div>
-
-      {/* Cycles List */}
-      {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
-        </div>
-      ) : cycles.length === 0 ? (
-        <div className="text-center py-20 bg-white rounded-xl border border-gray-200">
-          <CalendarDays className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900">No cycles yet</h3>
-          <p className="text-gray-500 mt-1">
-            Create your first goal cycle to get started
-          </p>
-          <Button
-            onClick={openCreate}
-            className="mt-4 bg-indigo-600 text-white hover:bg-indigo-700"
-          >
-            <Plus className="h-4 w-4 mr-1.5" />
-            Create Cycle
+    <div className="space-y-4">
+      <PageHeader
+        breadcrumbs={[
+          { label: "Dashboard", href: "/dashboard" },
+          { label: "Goal Cycles" },
+        ]}
+        title="Goal Cycles"
+        subtitle="Manage performance review cycles and their quarterly windows"
+        actions={
+          <Button onClick={openCreate} size="sm">
+            <Plus className="h-3.5 w-3.5 mr-1" />
+            New Cycle
           </Button>
-        </div>
+        }
+      />
+
+      {loading ? (
+        <PageSkeleton />
+      ) : cycles.length === 0 ? (
+        <EmptyState
+          icon={CalendarDays}
+          title="No cycles yet"
+          description="Create your first goal cycle to get started."
+          actionLabel="Create Cycle"
+          onAction={openCreate}
+        />
       ) : (
-        <div className="grid gap-4">
+        <div className="grid gap-3">
           {cycles.map((cycle) => (
             <div
               key={cycle.id}
-              className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-md transition-shadow"
+              className="rounded-lg border border-gray-200 bg-white p-4 hover:shadow-sm transition-shadow"
             >
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-50">
-                    <CalendarDays className="h-5 w-5 text-indigo-600" />
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-md bg-indigo-50">
+                    <CalendarDays className="h-4 w-4 text-indigo-600" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-gray-900">{cycle.name}</h3>
-                    <p className="text-xs text-gray-500">
-                      Created {new Date(cycle.createdAt).toLocaleDateString()}
+                    <h3 className="text-[13px] font-semibold text-gray-900">
+                      {cycle.name}
+                    </h3>
+                    <p className="text-[11px] text-gray-400">
+                      Created{" "}
+                      {new Date(cycle.createdAt).toLocaleDateString()}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span
-                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${statusBadgeClass(cycle.status)}`}
-                  >
-                    {statusIcon(cycle.status)}
-                    {cycle.status}
-                  </span>
+                  <StatusBadge status={cycle.status} />
                   <Button
-                    variant="outline"
-                    size="icon-sm"
+                    variant="ghost"
+                    size="icon-xs"
                     onClick={() => openEdit(cycle)}
                   >
-                    <Pencil className="h-3.5 w-3.5" />
+                    <Pencil className="h-3 w-3" />
                   </Button>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-3 text-sm">
-                <div className="bg-gray-50 rounded-lg p-3">
-                  <div className="text-xs font-medium text-gray-500 mb-1">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-[13px]">
+                <div className="bg-gray-50 rounded-md px-3 py-2">
+                  <div className="text-[11px] font-medium text-gray-400 mb-0.5">
                     Goal Setting
                   </div>
-                  <div className="text-gray-900">
-                    {new Date(cycle.goalSettingOpens).toLocaleDateString()} -{" "}
-                    {new Date(cycle.goalSettingCloses).toLocaleDateString()}
+                  <div className="text-gray-700">
+                    {formatDate(cycle.goalSettingOpens)} -{" "}
+                    {formatDate(cycle.goalSettingCloses)}
                   </div>
                 </div>
                 {(["q1", "q2", "q3", "q4"] as const).map((q) => (
-                  <div key={q} className="bg-gray-50 rounded-lg p-3">
-                    <div className="text-xs font-medium text-gray-500 mb-1">
+                  <div key={q} className="bg-gray-50 rounded-md px-3 py-2">
+                    <div className="text-[11px] font-medium text-gray-400 mb-0.5">
                       {q.toUpperCase()}
                     </div>
-                    <div className="text-gray-900">
-                      {new Date(
+                    <div className="text-gray-700">
+                      {formatDate(
                         cycle[`${q}Opens` as keyof GoalCycle] as string
-                      ).toLocaleDateString()}{" "}
+                      )}{" "}
                       -{" "}
-                      {new Date(
+                      {formatDate(
                         cycle[`${q}Closes` as keyof GoalCycle] as string
-                      ).toLocaleDateString()}
+                      )}
                     </div>
                   </div>
                 ))}
@@ -288,162 +264,142 @@ export default function CyclesPage() {
         </div>
       )}
 
-      {/* Create/Edit Dialog */}
-      {showDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">
-                {editingId ? "Edit Cycle" : "Create New Cycle"}
-              </h2>
-              <button
-                onClick={() => setShowDialog(false)}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <X className="h-5 w-5" />
-              </button>
+      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              {editingId ? "Edit Cycle" : "Create New Cycle"}
+            </DialogTitle>
+            <DialogDescription>
+              {editingId
+                ? "Update cycle details and date windows."
+                : "Define a new goal cycle with quarterly windows."}
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {formError && (
+              <div className="rounded-md bg-red-50 border border-red-200 px-3 py-2 text-[13px] text-red-700">
+                {formError}
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[11px] font-medium text-gray-500 uppercase tracking-wide mb-1">
+                  Cycle Name
+                </label>
+                <Input
+                  required
+                  value={form.name}
+                  onChange={(e) => updateForm("name", e.target.value)}
+                  placeholder="FY 2026-27"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-medium text-gray-500 uppercase tracking-wide mb-1">
+                  Status
+                </label>
+                <select
+                  value={form.status}
+                  onChange={(e) => updateForm("status", e.target.value)}
+                  className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                >
+                  <option value="DRAFT">Draft</option>
+                  <option value="ACTIVE">Active</option>
+                  <option value="CLOSED">Closed</option>
+                </select>
+              </div>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-5">
-              {error && (
-                <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">
-                  {error}
-                </div>
-              )}
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2 sm:col-span-1">
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                    Cycle Name
+            <div>
+              <div className="text-[11px] font-medium text-gray-500 uppercase tracking-wide mb-1.5">
+                Goal Setting Window
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] text-gray-400 mb-0.5">
+                    Opens
                   </label>
-                  <input
-                    type="text"
+                  <Input
+                    type="date"
                     required
-                    value={form.name}
-                    onChange={(e) => updateForm("name", e.target.value)}
-                    placeholder="FY 2026-27"
-                    className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none"
+                    value={form.goalSettingOpens}
+                    onChange={(e) =>
+                      updateForm("goalSettingOpens", e.target.value)
+                    }
                   />
                 </div>
-                <div className="col-span-2 sm:col-span-1">
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                    Status
+                <div>
+                  <label className="block text-[11px] text-gray-400 mb-0.5">
+                    Closes
                   </label>
-                  <select
-                    value={form.status}
-                    onChange={(e) => updateForm("status", e.target.value)}
-                    className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none"
-                  >
-                    <option value="DRAFT">Draft</option>
-                    <option value="ACTIVE">Active</option>
-                    <option value="CLOSED">Closed</option>
-                  </select>
+                  <Input
+                    type="date"
+                    required
+                    value={form.goalSettingCloses}
+                    onChange={(e) =>
+                      updateForm("goalSettingCloses", e.target.value)
+                    }
+                  />
                 </div>
               </div>
+            </div>
 
-              <div>
-                <h3 className="text-sm font-medium text-gray-700 mb-2">
-                  Goal Setting Window
-                </h3>
-                <div className="grid grid-cols-2 gap-4">
+            {(["q1", "q2", "q3", "q4"] as const).map((q) => (
+              <div key={q}>
+                <div className="text-[11px] font-medium text-gray-500 uppercase tracking-wide mb-1.5">
+                  {q.toUpperCase()} Achievement Window
+                </div>
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">
+                    <label className="block text-[11px] text-gray-400 mb-0.5">
                       Opens
                     </label>
-                    <input
+                    <Input
                       type="date"
                       required
-                      value={form.goalSettingOpens}
+                      value={form[`${q}Opens` as keyof typeof form]}
                       onChange={(e) =>
-                        updateForm("goalSettingOpens", e.target.value)
+                        updateForm(`${q}Opens`, e.target.value)
                       }
-                      className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">
+                    <label className="block text-[11px] text-gray-400 mb-0.5">
                       Closes
                     </label>
-                    <input
+                    <Input
                       type="date"
                       required
-                      value={form.goalSettingCloses}
+                      value={form[`${q}Closes` as keyof typeof form]}
                       onChange={(e) =>
-                        updateForm("goalSettingCloses", e.target.value)
+                        updateForm(`${q}Closes`, e.target.value)
                       }
-                      className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none"
                     />
                   </div>
                 </div>
               </div>
+            ))}
 
-              {(["q1", "q2", "q3", "q4"] as const).map((q) => (
-                <div key={q}>
-                  <h3 className="text-sm font-medium text-gray-700 mb-2">
-                    {q.toUpperCase()} Achievement Window
-                  </h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs text-gray-500 mb-1">
-                        Opens
-                      </label>
-                      <input
-                        type="date"
-                        required
-                        value={form[`${q}Opens` as keyof typeof form]}
-                        onChange={(e) =>
-                          updateForm(`${q}Opens`, e.target.value)
-                        }
-                        className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-gray-500 mb-1">
-                        Closes
-                      </label>
-                      <input
-                        type="date"
-                        required
-                        value={form[`${q}Closes` as keyof typeof form]}
-                        onChange={(e) =>
-                          updateForm(`${q}Closes`, e.target.value)
-                        }
-                        className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none"
-                      />
-                    </div>
-                  </div>
-                </div>
-              ))}
-
-              <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setShowDialog(false)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={saving}
-                  className="bg-indigo-600 text-white hover:bg-indigo-700"
-                >
-                  {saving ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
-                      Saving...
-                    </>
-                  ) : editingId ? (
-                    "Update Cycle"
-                  ) : (
-                    "Create Cycle"
-                  )}
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowDialog(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={saving}>
+                {saving && (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
+                )}
+                {editingId ? "Update Cycle" : "Create Cycle"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

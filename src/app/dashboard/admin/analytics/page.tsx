@@ -3,10 +3,12 @@
 import { useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { StatCard } from "@/components/shared/StatCard";
+import { FilterSelect } from "@/components/shared/FilterBar";
+import { PageSkeleton } from "@/components/shared/LoadingSkeleton";
+import { UserAvatar } from "@/components/shared/UserAvatar";
 import {
-  BarChart3,
-  Loader2,
   TrendingUp,
   Users,
   Target,
@@ -24,7 +26,6 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
 } from "recharts";
 
@@ -196,7 +197,6 @@ export default function AnalyticsPage() {
       .slice(0, 10);
   })();
 
-  // Summary stats
   const totalGoals = reports.length;
   const uniqueEmployees = new Set(reports.map((r) => r.employeeId)).size;
   const overallAvg =
@@ -228,120 +228,82 @@ export default function AnalyticsPage() {
   })();
 
   if (authStatus === "loading") {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
-      </div>
-    );
+    return <PageSkeleton />;
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            Analytics Dashboard
-          </h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Visual insights into goal performance across the organization
-          </p>
-        </div>
-        <select
-          value={cycleFilter}
-          onChange={(e) => setCycleFilter(e.target.value)}
-          className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none"
-        >
-          <option value="">Select Cycle</option>
-          {cycles.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-      </div>
+    <div className="space-y-4">
+      <PageHeader
+        breadcrumbs={[
+          { label: "Dashboard", href: "/dashboard" },
+          { label: "Analytics" },
+        ]}
+        title="Analytics Dashboard"
+        subtitle="Visual insights into goal performance across the organization"
+        actions={
+          <FilterSelect
+            value={cycleFilter}
+            onChange={setCycleFilter}
+            options={cycles.map((c) => ({ value: c.id, label: c.name }))}
+            placeholder="Select Cycle"
+          />
+        }
+      />
 
       {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
-        </div>
+        <PageSkeleton />
       ) : (
         <>
-          {/* Summary Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-            <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl p-5 text-white">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/20">
-                  <Target className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <div className="text-2xl font-bold">{totalGoals}</div>
-                  <div className="text-xs text-indigo-100">Total Goals</div>
-                </div>
-              </div>
-            </div>
-            <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl p-5 text-white">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/20">
-                  <TrendingUp className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <div className="text-2xl font-bold">{overallAvg}%</div>
-                  <div className="text-xs text-emerald-100">
-                    Overall Avg Score
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="bg-gradient-to-br from-violet-500 to-violet-600 rounded-xl p-5 text-white">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/20">
-                  <Users className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <div className="text-2xl font-bold">{uniqueEmployees}</div>
-                  <div className="text-xs text-violet-100">Employees</div>
-                </div>
-              </div>
-            </div>
-            <div className="bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl p-5 text-white">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/20">
-                  <Award className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <div className="text-2xl font-bold">
-                    {departmentData.length}
-                  </div>
-                  <div className="text-xs text-amber-100">Departments</div>
-                </div>
-              </div>
-            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+            <StatCard
+              title="Total Goals"
+              value={totalGoals}
+              icon={Target}
+              iconClassName="bg-indigo-100"
+            />
+            <StatCard
+              title="Overall Avg Score"
+              value={`${overallAvg}%`}
+              icon={TrendingUp}
+              iconClassName="bg-emerald-100"
+            />
+            <StatCard
+              title="Employees"
+              value={uniqueEmployees}
+              icon={Users}
+              iconClassName="bg-violet-100"
+            />
+            <StatCard
+              title="Departments"
+              value={departmentData.length}
+              icon={Award}
+              iconClassName="bg-amber-100"
+            />
           </div>
 
-          {/* Charts Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {/* Quarterly Trend Line Chart */}
-            <div className="bg-white rounded-xl border border-gray-200 p-6">
-              <h3 className="text-base font-semibold text-gray-900 mb-4">
+            <div className="rounded-lg border border-gray-200 bg-white p-4">
+              <h3 className="text-[13px] font-semibold text-gray-900 mb-3">
                 Quarterly Score Trend
               </h3>
               {quarterlyTrend.some((d) => d.avgScore > 0) ? (
-                <ResponsiveContainer width="100%" height={300}>
+                <ResponsiveContainer width="100%" height={280}>
                   <LineChart data={quarterlyTrend}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                     <XAxis
                       dataKey="quarter"
-                      tick={{ fontSize: 12, fill: "#6b7280" }}
+                      tick={{ fontSize: 11, fill: "#6b7280" }}
                     />
                     <YAxis
                       domain={[0, 100]}
-                      tick={{ fontSize: 12, fill: "#6b7280" }}
+                      tick={{ fontSize: 11, fill: "#6b7280" }}
                     />
                     <Tooltip
                       contentStyle={{
                         borderRadius: "8px",
                         border: "1px solid #e5e7eb",
+                        fontSize: "12px",
                         boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
                       }}
                     />
@@ -349,37 +311,48 @@ export default function AnalyticsPage() {
                       type="monotone"
                       dataKey="avgScore"
                       stroke="#6366f1"
-                      strokeWidth={3}
-                      dot={{ r: 6, fill: "#6366f1", strokeWidth: 2, stroke: "#fff" }}
-                      activeDot={{ r: 8 }}
+                      strokeWidth={2.5}
+                      dot={{
+                        r: 5,
+                        fill: "#6366f1",
+                        strokeWidth: 2,
+                        stroke: "#fff",
+                      }}
+                      activeDot={{ r: 7 }}
                       name="Avg Score (%)"
                     />
                   </LineChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="flex items-center justify-center h-[300px] text-gray-400 text-sm">
+                <div className="flex items-center justify-center h-[280px] text-gray-400 text-[13px]">
                   No quarterly data available
                 </div>
               )}
             </div>
 
             {/* Completion Distribution Pie Chart */}
-            <div className="bg-white rounded-xl border border-gray-200 p-6">
-              <h3 className="text-base font-semibold text-gray-900 mb-4">
+            <div className="rounded-lg border border-gray-200 bg-white p-4">
+              <h3 className="text-[13px] font-semibold text-gray-900 mb-3">
                 Completion Distribution
               </h3>
               {completionDistribution.length > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
+                <ResponsiveContainer width="100%" height={280}>
                   <PieChart>
                     <Pie
                       data={completionDistribution}
                       cx="50%"
                       cy="50%"
-                      innerRadius={60}
-                      outerRadius={110}
+                      innerRadius={55}
+                      outerRadius={100}
                       paddingAngle={3}
                       dataKey="value"
-                      label={({ name, percent }: { name?: string; percent?: number }) =>
+                      label={({
+                        name,
+                        percent,
+                      }: {
+                        name?: string;
+                        percent?: number;
+                      }) =>
                         `${(name ?? "").split(" ")[0]} ${((percent ?? 0) * 100).toFixed(0)}%`
                       }
                       labelLine={{ strokeWidth: 1 }}
@@ -395,25 +368,26 @@ export default function AnalyticsPage() {
                       contentStyle={{
                         borderRadius: "8px",
                         border: "1px solid #e5e7eb",
+                        fontSize: "12px",
                         boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
                       }}
                     />
                   </PieChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="flex items-center justify-center h-[300px] text-gray-400 text-sm">
+                <div className="flex items-center justify-center h-[280px] text-gray-400 text-[13px]">
                   No completion data available
                 </div>
               )}
             </div>
 
             {/* Department Performance Bar Chart */}
-            <div className="bg-white rounded-xl border border-gray-200 p-6">
-              <h3 className="text-base font-semibold text-gray-900 mb-4">
+            <div className="rounded-lg border border-gray-200 bg-white p-4">
+              <h3 className="text-[13px] font-semibold text-gray-900 mb-3">
                 Department Performance
               </h3>
               {departmentData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
+                <ResponsiveContainer width="100%" height={280}>
                   <BarChart data={departmentData} layout="vertical">
                     <CartesianGrid
                       strokeDasharray="3 3"
@@ -423,43 +397,44 @@ export default function AnalyticsPage() {
                     <XAxis
                       type="number"
                       domain={[0, 100]}
-                      tick={{ fontSize: 12, fill: "#6b7280" }}
+                      tick={{ fontSize: 11, fill: "#6b7280" }}
                     />
                     <YAxis
                       type="category"
                       dataKey="department"
-                      width={120}
-                      tick={{ fontSize: 12, fill: "#6b7280" }}
+                      width={110}
+                      tick={{ fontSize: 11, fill: "#6b7280" }}
                     />
                     <Tooltip
                       contentStyle={{
                         borderRadius: "8px",
                         border: "1px solid #e5e7eb",
+                        fontSize: "12px",
                         boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
                       }}
                     />
                     <Bar
                       dataKey="avgScore"
                       fill="#6366f1"
-                      radius={[0, 6, 6, 0]}
+                      radius={[0, 4, 4, 0]}
                       name="Avg Score (%)"
                     />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="flex items-center justify-center h-[300px] text-gray-400 text-sm">
+                <div className="flex items-center justify-center h-[280px] text-gray-400 text-[13px]">
                   No department data available
                 </div>
               )}
             </div>
 
             {/* Thrust Area Performance */}
-            <div className="bg-white rounded-xl border border-gray-200 p-6">
-              <h3 className="text-base font-semibold text-gray-900 mb-4">
+            <div className="rounded-lg border border-gray-200 bg-white p-4">
+              <h3 className="text-[13px] font-semibold text-gray-900 mb-3">
                 Top Thrust Areas by Performance
               </h3>
               {thrustAreaData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
+                <ResponsiveContainer width="100%" height={280}>
                   <BarChart data={thrustAreaData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                     <XAxis
@@ -467,20 +442,25 @@ export default function AnalyticsPage() {
                       tick={{ fontSize: 10, fill: "#6b7280" }}
                       angle={-20}
                       textAnchor="end"
-                      height={60}
+                      height={55}
                     />
                     <YAxis
                       domain={[0, 100]}
-                      tick={{ fontSize: 12, fill: "#6b7280" }}
+                      tick={{ fontSize: 11, fill: "#6b7280" }}
                     />
                     <Tooltip
                       contentStyle={{
                         borderRadius: "8px",
                         border: "1px solid #e5e7eb",
+                        fontSize: "12px",
                         boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
                       }}
                     />
-                    <Bar dataKey="avgScore" radius={[6, 6, 0, 0]} name="Avg Score (%)">
+                    <Bar
+                      dataKey="avgScore"
+                      radius={[4, 4, 0, 0]}
+                      name="Avg Score (%)"
+                    >
                       {thrustAreaData.map((_, index) => (
                         <Cell
                           key={`cell-${index}`}
@@ -491,7 +471,7 @@ export default function AnalyticsPage() {
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="flex items-center justify-center h-[300px] text-gray-400 text-sm">
+                <div className="flex items-center justify-center h-[280px] text-gray-400 text-[13px]">
                   No thrust area data available
                 </div>
               )}
@@ -499,19 +479,19 @@ export default function AnalyticsPage() {
           </div>
 
           {/* Top Performers */}
-          <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <h3 className="text-base font-semibold text-gray-900 mb-4">
+          <div className="rounded-lg border border-gray-200 bg-white p-4">
+            <h3 className="text-[13px] font-semibold text-gray-900 mb-3">
               Top Performers
             </h3>
             {topPerformers.length > 0 ? (
-              <div className="space-y-3">
+              <div className="space-y-2.5">
                 {topPerformers.map((performer, idx) => (
                   <div
                     key={performer.name}
-                    className="flex items-center gap-4"
+                    className="flex items-center gap-3"
                   >
                     <div
-                      className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold ${
+                      className={`flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-bold ${
                         idx === 0
                           ? "bg-amber-100 text-amber-700"
                           : idx === 1
@@ -523,13 +503,14 @@ export default function AnalyticsPage() {
                     >
                       {idx + 1}
                     </div>
+                    <UserAvatar name={performer.name} size="xs" />
                     <div className="flex-1">
-                      <div className="text-sm font-medium text-gray-900">
+                      <div className="text-[13px] font-medium text-gray-900">
                         {performer.name}
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className="w-32 h-2 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="w-28 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                         <div
                           className="h-full bg-indigo-500 rounded-full transition-all"
                           style={{
@@ -537,7 +518,7 @@ export default function AnalyticsPage() {
                           }}
                         />
                       </div>
-                      <span className="text-sm font-semibold text-gray-900 w-14 text-right">
+                      <span className="text-[13px] font-semibold text-gray-900 w-12 text-right">
                         {performer.avgScore}%
                       </span>
                     </div>
@@ -545,7 +526,7 @@ export default function AnalyticsPage() {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8 text-gray-400 text-sm">
+              <div className="text-center py-6 text-gray-400 text-[13px]">
                 No performer data available
               </div>
             )}

@@ -5,16 +5,39 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { StatCard } from "@/components/shared/StatCard";
+import { StatusBadge } from "@/components/shared/StatusBadge";
+import { UserAvatar } from "@/components/shared/UserAvatar";
+import { FilterBar, FilterSelect } from "@/components/shared/FilterBar";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { TableSkeleton } from "@/components/shared/LoadingSkeleton";
+import {
   Users,
-  Search,
-  Loader2,
+  UserCheck,
+  FileText,
+  Building2,
   ChevronLeft,
   ChevronRight,
-  FileText,
-  UserCheck,
-  Building2,
-  Filter,
+  MoreHorizontal,
+  Eye,
+  Mail,
+  FileX,
 } from "lucide-react";
+import { PageSkeleton } from "@/components/shared/LoadingSkeleton";
 
 interface Employee {
   id: string;
@@ -54,7 +77,6 @@ export default function EmployeesPage() {
       if (res.ok) {
         const data = await res.json();
         setEmployees(Array.isArray(data) ? data : data.users || []);
-        // Extract unique departments
         const depts = [
           ...new Set(
             (Array.isArray(data) ? data : data.users || [])
@@ -81,7 +103,6 @@ export default function EmployeesPage() {
     }
   }, [authStatus, router, fetchEmployees]);
 
-  // Client-side search and pagination
   const filtered = employees.filter((e) => {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
@@ -97,273 +118,212 @@ export default function EmployeesPage() {
 
   const getSheetStatus = (emp: Employee) => {
     if (!emp.goalSheets || emp.goalSheets.length === 0) return "No Sheet";
-    const latest = emp.goalSheets[0];
-    return latest.status;
-  };
-
-  const statusBadge = (status: string) => {
-    const styles: Record<string, string> = {
-      APPROVED: "bg-green-50 text-green-700 border-green-200",
-      SUBMITTED: "bg-blue-50 text-blue-700 border-blue-200",
-      DRAFT: "bg-amber-50 text-amber-700 border-amber-200",
-      RETURNED: "bg-red-50 text-red-700 border-red-200",
-      "No Sheet": "bg-gray-100 text-gray-500 border-gray-200",
-    };
-    return (
-      <span
-        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${styles[status] || styles["No Sheet"]}`}
-      >
-        {status}
-      </span>
-    );
-  };
-
-  const roleBadge = (role: string) => {
-    const styles: Record<string, string> = {
-      ADMIN: "bg-purple-50 text-purple-700 border-purple-200",
-      MANAGER: "bg-indigo-50 text-indigo-700 border-indigo-200",
-      EMPLOYEE: "bg-gray-50 text-gray-600 border-gray-200",
-    };
-    return (
-      <span
-        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${styles[role] || styles.EMPLOYEE}`}
-      >
-        {role}
-      </span>
-    );
+    return emp.goalSheets[0].status;
   };
 
   if (authStatus === "loading") {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
-      </div>
-    );
+    return <PageSkeleton />;
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Employee Management</h1>
-        <p className="text-sm text-gray-500 mt-1">
-          View and manage employees, their departments, roles, and goal sheet
-          status
-        </p>
+    <div className="space-y-4">
+      <PageHeader
+        breadcrumbs={[
+          { label: "Dashboard", href: "/dashboard" },
+          { label: "Employees" },
+        ]}
+        title="Employees"
+        subtitle="View and manage employees, departments, roles, and goal sheet status"
+      />
+
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+        <StatCard
+          title="Total Employees"
+          value={employees.length}
+          icon={Users}
+          iconClassName="bg-indigo-100"
+        />
+        <StatCard
+          title="Managers"
+          value={employees.filter((e) => e.role === "MANAGER").length}
+          icon={UserCheck}
+          iconClassName="bg-emerald-100"
+        />
+        <StatCard
+          title="Sheets Approved"
+          value={
+            employees.filter(
+              (e) =>
+                e.goalSheets &&
+                e.goalSheets.some((gs) => gs.status === "APPROVED")
+            ).length
+          }
+          icon={FileText}
+          iconClassName="bg-blue-100"
+        />
+        <StatCard
+          title="Departments"
+          value={departments.length}
+          icon={Building2}
+          iconClassName="bg-amber-100"
+        />
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-50">
-              <Users className="h-5 w-5 text-indigo-600" />
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-gray-900">
-                {employees.length}
-              </div>
-              <div className="text-xs text-gray-500">Total Employees</div>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-50">
-              <UserCheck className="h-5 w-5 text-green-600" />
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-gray-900">
-                {employees.filter((e) => e.role === "MANAGER").length}
-              </div>
-              <div className="text-xs text-gray-500">Managers</div>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50">
-              <FileText className="h-5 w-5 text-blue-600" />
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-gray-900">
-                {
-                  employees.filter(
-                    (e) =>
-                      e.goalSheets &&
-                      e.goalSheets.some((gs) => gs.status === "APPROVED")
-                  ).length
-                }
-              </div>
-              <div className="text-xs text-gray-500">Sheets Approved</div>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-50">
-              <Building2 className="h-5 w-5 text-amber-600" />
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-gray-900">
-                {departments.length}
-              </div>
-              <div className="text-xs text-gray-500">Departments</div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <FilterBar
+        searchValue={searchQuery}
+        onSearchChange={(v) => {
+          setSearchQuery(v);
+          setPage(1);
+        }}
+        searchPlaceholder="Search by name, email, or department..."
+      >
+        <FilterSelect
+          value={departmentFilter}
+          onChange={(v) => {
+            setDepartmentFilter(v);
+            setPage(1);
+          }}
+          options={departments.map((d) => ({ value: d, label: d }))}
+          placeholder="All Departments"
+        />
+        <FilterSelect
+          value={roleFilter}
+          onChange={(v) => {
+            setRoleFilter(v);
+            setPage(1);
+          }}
+          options={[
+            { value: "ADMIN", label: "Admin" },
+            { value: "MANAGER", label: "Manager" },
+            { value: "EMPLOYEE", label: "Employee" },
+          ]}
+          placeholder="All Roles"
+        />
+      </FilterBar>
 
-      {/* Filters */}
-      <div className="bg-white rounded-xl border border-gray-200 p-4">
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search by name, email, or department..."
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setPage(1);
-              }}
-              className="block w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none"
-            />
-          </div>
-          <div className="flex gap-2">
-            <div className="relative">
-              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <select
-                value={departmentFilter}
-                onChange={(e) => {
-                  setDepartmentFilter(e.target.value);
-                  setPage(1);
-                }}
-                className="rounded-lg border border-gray-300 bg-white pl-9 pr-8 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none appearance-none"
-              >
-                <option value="">All Departments</option>
-                {departments.map((d) => (
-                  <option key={d} value={d}>
-                    {d}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <select
-              value={roleFilter}
-              onChange={(e) => {
-                setRoleFilter(e.target.value);
-                setPage(1);
-              }}
-              className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none"
-            >
-              <option value="">All Roles</option>
-              <option value="ADMIN">Admin</option>
-              <option value="MANAGER">Manager</option>
-              <option value="EMPLOYEE">Employee</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      {/* Table */}
       {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
-        </div>
+        <TableSkeleton rows={8} cols={6} />
+      ) : filtered.length === 0 ? (
+        <EmptyState
+          icon={FileX}
+          title="No employees found"
+          description="Try adjusting your search or filter criteria."
+        />
       ) : (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-200 bg-gray-50">
-                  <th className="text-left px-4 py-3 font-medium text-gray-600">
-                    Employee
-                  </th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-600">
-                    Department
-                  </th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-600">
-                    Role
-                  </th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-600">
-                    Manager
-                  </th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-600">
-                    Goal Sheet
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {paged.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={5}
-                      className="text-center py-12 text-gray-500"
-                    >
-                      No employees found
-                    </td>
-                  </tr>
-                ) : (
-                  paged.map((emp) => (
-                    <tr
-                      key={emp.id}
-                      className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
-                    >
-                      <td className="px-4 py-3">
-                        <div>
-                          <div className="font-medium text-gray-900">
-                            {emp.name}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            {emp.email}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-gray-700">
-                        {emp.department || "-"}
-                      </td>
-                      <td className="px-4 py-3">{roleBadge(emp.role)}</td>
-                      <td className="px-4 py-3 text-gray-700">
-                        {emp.manager?.name || "-"}
-                      </td>
-                      <td className="px-4 py-3">
-                        {statusBadge(getSheetStatus(emp))}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+        <div className="rounded-lg border border-gray-200 bg-white">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-gray-50/80">
+                <TableHead className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold py-2 px-3">
+                  Employee
+                </TableHead>
+                <TableHead className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold py-2 px-3">
+                  Email
+                </TableHead>
+                <TableHead className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold py-2 px-3">
+                  Department
+                </TableHead>
+                <TableHead className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold py-2 px-3">
+                  Role
+                </TableHead>
+                <TableHead className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold py-2 px-3">
+                  Manager
+                </TableHead>
+                <TableHead className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold py-2 px-3">
+                  Goal Sheet
+                </TableHead>
+                <TableHead className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold py-2 px-3 w-10" />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {paged.map((emp) => (
+                <TableRow key={emp.id}>
+                  <TableCell className="py-2 px-3">
+                    <div className="flex items-center gap-2.5">
+                      <UserAvatar name={emp.name || "?"} size="sm" />
+                      <span className="text-[13px] font-medium text-gray-900">
+                        {emp.name}
+                      </span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="py-2 px-3 text-[13px] text-gray-600">
+                    {emp.email}
+                  </TableCell>
+                  <TableCell className="py-2 px-3 text-[13px] text-gray-700">
+                    {emp.department || "-"}
+                  </TableCell>
+                  <TableCell className="py-2 px-3">
+                    <StatusBadge status={emp.role} />
+                  </TableCell>
+                  <TableCell className="py-2 px-3 text-[13px] text-gray-700">
+                    {emp.manager?.name || "-"}
+                  </TableCell>
+                  <TableCell className="py-2 px-3">
+                    <StatusBadge status={getSheetStatus(emp)} />
+                  </TableCell>
+                  <TableCell className="py-2 px-3">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger
+                        render={
+                          <Button variant="ghost" size="icon-xs" />
+                        }
+                      >
+                        <MoreHorizontal className="h-3.5 w-3.5" />
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={() =>
+                            router.push(
+                              `/dashboard/admin/employees/${emp.id}`
+                            )
+                          }
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                          View Details
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() =>
+                            window.open(`mailto:${emp.email}`)
+                          }
+                        >
+                          <Mail className="h-3.5 w-3.5" />
+                          Send Email
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
 
-          {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200">
-              <div className="text-sm text-gray-500">
-                Showing {(page - 1) * pageSize + 1}-
+            <div className="flex items-center justify-between px-3 py-2.5 border-t border-gray-200">
+              <div className="text-[11px] text-gray-500">
+                Showing {(page - 1) * pageSize + 1}
+                {" - "}
                 {Math.min(page * pageSize, filtered.length)} of{" "}
                 {filtered.length}
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 <Button
                   variant="outline"
-                  size="icon-sm"
+                  size="icon-xs"
                   disabled={page <= 1}
                   onClick={() => setPage((p) => p - 1)}
                 >
-                  <ChevronLeft className="h-4 w-4" />
+                  <ChevronLeft className="h-3.5 w-3.5" />
                 </Button>
-                <span className="text-sm text-gray-700">
-                  Page {page} of {totalPages}
+                <span className="text-[11px] text-gray-600 px-1">
+                  {page} / {totalPages}
                 </span>
                 <Button
                   variant="outline"
-                  size="icon-sm"
+                  size="icon-xs"
                   disabled={page >= totalPages}
                   onClick={() => setPage((p) => p + 1)}
                 >
-                  <ChevronRight className="h-4 w-4" />
+                  <ChevronRight className="h-3.5 w-3.5" />
                 </Button>
               </div>
             </div>

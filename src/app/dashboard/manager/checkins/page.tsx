@@ -1,19 +1,32 @@
 "use client";
 
-import { useState, useEffect, useCallback, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableFooter,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { StatCard } from "@/components/shared/StatCard";
+import { StatusBadge } from "@/components/shared/StatusBadge";
+import { UserAvatar } from "@/components/shared/UserAvatar";
+import { PageSkeleton } from "@/components/shared/LoadingSkeleton";
+import { EmptyState } from "@/components/shared/EmptyState";
 import {
   Save,
-  AlertCircle,
-  CheckCircle2,
-  ChevronDown,
-  ArrowLeft,
-  MessageSquare,
   BarChart3,
   TrendingUp,
-  Calendar,
+  Target,
+  MessageSquare,
   User,
 } from "lucide-react";
 import {
@@ -24,31 +37,6 @@ import {
 } from "@/lib/scoring";
 
 const QUARTERS = ["Q1", "Q2", "Q3", "Q4"];
-
-const STATUS_OPTIONS = [
-  { value: "NOT_STARTED", label: "Not Started" },
-  { value: "ON_TRACK", label: "On Track" },
-  { value: "AT_RISK", label: "At Risk" },
-  { value: "DELAYED", label: "Delayed" },
-  { value: "COMPLETED", label: "Completed" },
-];
-
-function getStatusColor(status: string) {
-  switch (status) {
-    case "NOT_STARTED":
-      return "bg-gray-100 text-gray-700";
-    case "ON_TRACK":
-      return "bg-emerald-100 text-emerald-700";
-    case "AT_RISK":
-      return "bg-amber-100 text-amber-700";
-    case "DELAYED":
-      return "bg-red-100 text-red-700";
-    case "COMPLETED":
-      return "bg-blue-100 text-blue-700";
-    default:
-      return "bg-gray-100 text-gray-700";
-  }
-}
 
 function getScoreColor(score: number | null) {
   if (score === null) return "text-gray-400";
@@ -131,18 +119,6 @@ function ManagerCheckinsContent() {
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(
     null
   );
-  const [toast, setToast] = useState<{
-    message: string;
-    type: "success" | "error";
-  } | null>(null);
-
-  const showToast = useCallback(
-    (message: string, type: "success" | "error") => {
-      setToast({ message, type });
-      setTimeout(() => setToast(null), 4000);
-    },
-    []
-  );
 
   // Load team members with approved sheets
   useEffect(() => {
@@ -167,7 +143,6 @@ function ManagerCheckinsContent() {
         if (!sheetsRes.ok) return;
         const sheets: GoalSheet[] = await sheetsRes.json();
 
-        // Only approved sheets can have check-ins
         const approvedSheets = sheets.filter(
           (s) => s.status === "APPROVED"
         );
@@ -180,7 +155,6 @@ function ManagerCheckinsContent() {
         }));
         setTeamMembers(members);
 
-        // If paramSheetId, select that member
         if (paramSheetId) {
           const target = members.find(
             (m) => m.sheetId === paramSheetId
@@ -221,14 +195,14 @@ function ManagerCheckinsContent() {
         setGoalSheet(sheet);
       } catch (err) {
         console.error("Load sheet error:", err);
-        showToast("Failed to load goal sheet", "error");
+        toast.error("Failed to load goal sheet");
       } finally {
         setLoading(false);
       }
     }
 
     loadSheet();
-  }, [selectedMemberId, teamMembers, showToast]);
+  }, [selectedMemberId, teamMembers]);
 
   // Load quarter data
   useEffect(() => {
@@ -236,7 +210,6 @@ function ManagerCheckinsContent() {
 
     async function loadQuarterData() {
       try {
-        // Load achievements
         const achRes = await fetch(
           `/api/achievements?goalSheetId=${goalSheet!.id}&quarter=${selectedQuarter}`
         );
@@ -260,7 +233,6 @@ function ManagerCheckinsContent() {
           setAchievements(achMap);
         }
 
-        // Load check-in
         const ciRes = await fetch(
           `/api/checkins?goalSheetId=${goalSheet!.id}&quarter=${selectedQuarter}`
         );
@@ -301,7 +273,6 @@ function ManagerCheckinsContent() {
     setSaving(true);
 
     try {
-      // Save manager comment
       if (managerComment.trim()) {
         const ciRes = await fetch("/api/checkins", {
           method: "POST",
@@ -322,52 +293,46 @@ function ManagerCheckinsContent() {
         setCurrentCheckIn(ciData);
       }
 
-      showToast("Check-in comment saved!", "success");
+      toast.success("Check-in comment saved!");
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "Failed to save";
-      showToast(message, "error");
+      toast.error(message);
     } finally {
       setSaving(false);
     }
   }
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-8 w-8 animate-spin rounded-full border-3 border-indigo-200 border-t-indigo-600" />
-          <p className="text-sm text-gray-500">Loading check-ins...</p>
-        </div>
-      </div>
-    );
+    return <PageSkeleton />;
   }
 
   if (teamMembers.length === 0) {
     return (
-      <div className="space-y-6 max-w-5xl mx-auto">
-        <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => router.push("/dashboard/manager/team")}
-          >
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            Back to Team
-          </Button>
-        </div>
-        <div className="flex flex-col items-center justify-center py-16">
-          <div className="rounded-xl border border-gray-200 bg-white p-8 text-center max-w-md">
-            <BarChart3 className="mx-auto h-10 w-10 text-gray-300 mb-3" />
-            <h3 className="text-lg font-semibold text-gray-700 mb-2">
-              No Approved Goal Sheets
-            </h3>
-            <p className="text-sm text-gray-500">
-              Check-ins are only available for team members with approved
-              goal sheets. Approve pending goal sheets first.
-            </p>
-          </div>
-        </div>
+      <div className="max-w-5xl mx-auto">
+        <PageHeader
+          breadcrumbs={[
+            { label: "Dashboard", href: "/dashboard" },
+            { label: "Team Check-ins" },
+          ]}
+          title="Team Check-ins"
+          actions={
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => router.push("/dashboard/manager/team")}
+            >
+              Back to Team
+            </Button>
+          }
+        />
+        <EmptyState
+          icon={BarChart3}
+          title="No Approved Goal Sheets"
+          description="Check-ins are only available for team members with approved goal sheets. Approve pending goal sheets first."
+          actionLabel="View Team"
+          onAction={() => router.push("/dashboard/manager/team")}
+        />
       </div>
     );
   }
@@ -377,309 +342,225 @@ function ManagerCheckinsContent() {
     (m) => m.id === selectedMemberId
   );
 
-  // Get all check-ins for history
-  const checkInHistory =
-    goalSheet?.checkIns
-      ?.filter((ci) => ci.quarter === selectedQuarter)
-      .sort(
-        (a, b) =>
-          new Date(b.checkedInAt).getTime() -
-          new Date(a.checkedInAt).getTime()
-      ) || [];
-
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
-      {/* Toast */}
-      {toast && (
-        <div
-          className={`fixed top-4 right-4 z-50 flex items-center gap-2 rounded-lg border px-4 py-3 shadow-lg ${
-            toast.type === "success"
-              ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-              : "border-red-200 bg-red-50 text-red-800"
-          }`}
-        >
-          {toast.type === "success" ? (
-            <CheckCircle2 className="h-4 w-4" />
-          ) : (
-            <AlertCircle className="h-4 w-4" />
-          )}
-          <span className="text-sm font-medium">{toast.message}</span>
-          <button
-            onClick={() => setToast(null)}
-            className="ml-2 text-current opacity-60 hover:opacity-100"
-          >
-            x
-          </button>
-        </div>
-      )}
-
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => router.push("/dashboard/manager/team")}
-          >
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            Back
-          </Button>
-          <div className="h-6 w-px bg-gray-200" />
-          <div>
-            <h2 className="text-xl font-bold text-gray-900">
-              Team Check-ins
-            </h2>
-            <p className="text-xs text-gray-500">
-              Review progress and provide feedback
-            </p>
-          </div>
-        </div>
-        <Button onClick={handleSave} disabled={saving}>
-          <Save className="h-4 w-4 mr-1" />
-          {saving ? "Saving..." : "Save Comment"}
-        </Button>
-      </div>
-
-      {/* Team member selector */}
-      <div className="flex gap-2 overflow-x-auto pb-1">
-        {teamMembers.map((member) => (
-          <button
-            key={member.id}
-            onClick={() => setSelectedMemberId(member.id)}
-            className={`flex items-center gap-2 shrink-0 rounded-lg border px-3 py-2 text-sm transition-colors ${
-              selectedMemberId === member.id
-                ? "border-indigo-300 bg-indigo-50 text-indigo-700"
-                : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
-            }`}
-          >
-            <div
-              className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ${
-                selectedMemberId === member.id
-                  ? "bg-indigo-200 text-indigo-800"
-                  : "bg-gray-100 text-gray-600"
-              }`}
+    <div className="space-y-4 max-w-5xl mx-auto">
+      <PageHeader
+        breadcrumbs={[
+          { label: "Dashboard", href: "/dashboard" },
+          { label: "Team Check-ins" },
+        ]}
+        title="Team Check-ins"
+        subtitle="Review progress and provide feedback"
+        actions={
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => router.push("/dashboard/manager/team")}
             >
-              {member.name
-                .split(" ")
-                .map((n) => n[0])
-                .join("")
-                .toUpperCase()
-                .slice(0, 2)}
-            </div>
-            <span className="hidden sm:inline">{member.name}</span>
-            <span className="sm:hidden">
-              {member.name.split(" ")[0]}
-            </span>
-          </button>
-        ))}
-      </div>
+              Back to Team
+            </Button>
+            <Button size="sm" onClick={handleSave} disabled={saving}>
+              <Save className="h-3.5 w-3.5 mr-1" />
+              {saving ? "Saving..." : "Save Comment"}
+            </Button>
+          </div>
+        }
+      />
 
-      {/* Quarter selector */}
-      <div className="flex gap-2">
-        {QUARTERS.map((q) => (
-          <button
-            key={q}
-            onClick={() => setSelectedQuarter(q)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              selectedQuarter === q
-                ? "bg-indigo-600 text-white shadow-sm"
-                : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-            }`}
-          >
-            {q}
-          </button>
-        ))}
-      </div>
+      {/* Team member selector tabs */}
+      <Tabs
+        value={selectedMemberId || undefined}
+        onValueChange={(value) => setSelectedMemberId(value as string)}
+      >
+        <TabsList variant="line">
+          {teamMembers.map((member) => (
+            <TabsTrigger key={member.id} value={member.id}>
+              <UserAvatar name={member.name} size="xs" />
+              <span className="text-[13px]">{member.name}</span>
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
+
+      {/* Quarter selector tabs */}
+      <Tabs
+        value={selectedQuarter}
+        onValueChange={(value) => setSelectedQuarter(value as string)}
+      >
+        <TabsList>
+          {QUARTERS.map((q) => (
+            <TabsTrigger key={q} value={q}>
+              {q}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
 
       {goalSheet && selectedMember && (
         <>
-          {/* Member info + score summary */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="rounded-xl border border-gray-200 bg-white p-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-100 text-indigo-700 text-sm font-semibold">
-                  {selectedMember.name
-                    .split(" ")
-                    .map((n) => n[0])
-                    .join("")
-                    .toUpperCase()
-                    .slice(0, 2)}
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-gray-900">
+          {/* Summary cards */}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="rounded-lg border border-gray-200 bg-white px-4 py-3">
+              <div className="flex items-center gap-2.5">
+                <UserAvatar name={selectedMember.name} size="sm" />
+                <div className="min-w-0">
+                  <p className="text-[13px] font-semibold text-gray-900 truncate">
                     {selectedMember.name}
                   </p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-[11px] text-gray-500 truncate">
                     {selectedMember.department || "No department"}
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="rounded-xl border border-gray-200 bg-white p-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-100">
-                  <TrendingUp className="h-5 w-5 text-indigo-600" />
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">
-                    Weighted Score ({selectedQuarter})
-                  </p>
-                  <p
-                    className={`text-xl font-bold ${getScoreColor(overallScore)}`}
-                  >
-                    {overallScore.toFixed(1)}%
-                  </p>
-                </div>
-              </div>
-            </div>
+            <StatCard
+              title={`Weighted Score (${selectedQuarter})`}
+              value={`${overallScore.toFixed(1)}%`}
+              icon={TrendingUp}
+              iconClassName="bg-indigo-100"
+            />
 
-            <div className="rounded-xl border border-gray-200 bg-white p-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-100">
-                  <Calendar className="h-5 w-5 text-gray-600" />
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">Goals</p>
-                  <p className="text-xl font-bold text-gray-900">
-                    {goalSheet.goals.length}
-                  </p>
-                </div>
-              </div>
-            </div>
+            <StatCard
+              title="Goals"
+              value={goalSheet.goals.length}
+              icon={Target}
+              iconClassName="bg-gray-100"
+            />
           </div>
 
-          {/* Planned vs Actual comparison table */}
-          <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
-            <div className="px-5 py-3 border-b border-gray-100 bg-gray-50">
-              <h3 className="text-sm font-semibold text-gray-700">
+          {/* Planned vs Actual table */}
+          <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
+            <div className="px-4 py-2.5 border-b border-gray-100 bg-gray-50">
+              <h3 className="text-[13px] font-semibold text-gray-700">
                 Goal Progress - {selectedQuarter}
               </h3>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gray-100">
-                    <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                      Goal
-                    </th>
-                    <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider w-24">
-                      Target
-                    </th>
-                    <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider w-24">
-                      Actual
-                    </th>
-                    <th className="text-center px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider w-24">
-                      Status
-                    </th>
-                    <th className="text-center px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider w-20">
-                      Score
-                    </th>
-                    <th className="text-center px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider w-20">
-                      Weighted
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {goalSheet.goals
-                    .sort((a, b) => a.sortOrder - b.sortOrder)
-                    .map((goal) => {
-                      const ach = achievements[goal.id];
-                      const score = getGoalScore(goal);
-                      const weighted = getWeightedScore(
-                        score,
-                        goal.weightage
-                      );
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-gray-50/50">
+                  <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 py-2 px-3">
+                    Goal
+                  </TableHead>
+                  <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 py-2 px-3 w-24">
+                    Target
+                  </TableHead>
+                  <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 py-2 px-3 w-24">
+                    Actual
+                  </TableHead>
+                  <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 py-2 px-3 text-center w-24">
+                    Status
+                  </TableHead>
+                  <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 py-2 px-3 text-center w-20">
+                    Score
+                  </TableHead>
+                  <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 py-2 px-3 text-center w-20">
+                    Weighted
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {goalSheet.goals
+                  .sort((a, b) => a.sortOrder - b.sortOrder)
+                  .map((goal) => {
+                    const ach = achievements[goal.id];
+                    const score = getGoalScore(goal);
+                    const weighted = getWeightedScore(
+                      score,
+                      goal.weightage
+                    );
 
-                      return (
-                        <tr key={goal.id} className="hover:bg-gray-50/50">
-                          <td className="px-4 py-3">
-                            <p className="text-sm font-medium text-gray-900">
-                              {goal.title}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              {goal.thrustArea} &middot;{" "}
-                              {getUomLabel(goal.uomType)} &middot;{" "}
-                              {goal.weightage}%
-                            </p>
-                          </td>
-                          <td className="px-4 py-3 text-sm text-gray-700">
-                            {formatTarget(goal.uomType, goal.target)}
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className="text-sm font-medium text-gray-900">
-                              {ach?.actualValue || "--"}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            <span
-                              className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${getStatusColor(ach?.status || "NOT_STARTED")}`}
-                            >
-                              {(
-                                ach?.status || "NOT_STARTED"
-                              ).replace("_", " ")}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            <span
-                              className={`text-sm font-semibold ${getScoreColor(score)}`}
-                            >
-                              {score !== null
-                                ? `${score.toFixed(0)}%`
-                                : "--"}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            <span
-                              className={`text-sm font-semibold ${getScoreColor(weighted || null)}`}
-                            >
-                              {score !== null
-                                ? `${weighted.toFixed(1)}%`
-                                : "--"}
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                </tbody>
-                <tfoot>
-                  <tr className="bg-gray-50 border-t border-gray-200">
-                    <td
-                      colSpan={4}
-                      className="px-4 py-3 text-sm font-semibold text-gray-700 text-right"
-                    >
-                      Overall Weighted Score
-                    </td>
-                    <td colSpan={2} className="px-4 py-3 text-center">
-                      <span
-                        className={`text-lg font-bold ${getScoreColor(overallScore)}`}
+                    return (
+                      <TableRow
+                        key={goal.id}
+                        className="hover:bg-gray-50/50"
                       >
-                        {overallScore.toFixed(1)}%
-                      </span>
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
+                        <TableCell className="py-2 px-3">
+                          <p className="text-[13px] font-medium text-gray-900">
+                            {goal.title}
+                          </p>
+                          <p className="text-[11px] text-gray-500">
+                            {goal.thrustArea} ·{" "}
+                            {getUomLabel(goal.uomType)} ·{" "}
+                            {goal.weightage}%
+                          </p>
+                        </TableCell>
+                        <TableCell className="py-2 px-3 text-[13px] text-gray-700">
+                          {formatTarget(goal.uomType, goal.target)}
+                        </TableCell>
+                        <TableCell className="py-2 px-3">
+                          <span className="text-[13px] font-medium text-gray-900">
+                            {ach?.actualValue || "--"}
+                          </span>
+                        </TableCell>
+                        <TableCell className="py-2 px-3 text-center">
+                          <StatusBadge
+                            status={ach?.status || "NOT_STARTED"}
+                          />
+                        </TableCell>
+                        <TableCell className="py-2 px-3 text-center">
+                          <span
+                            className={`text-[13px] font-semibold ${getScoreColor(score)}`}
+                          >
+                            {score !== null
+                              ? `${score.toFixed(0)}%`
+                              : "--"}
+                          </span>
+                        </TableCell>
+                        <TableCell className="py-2 px-3 text-center">
+                          <span
+                            className={`text-[13px] font-semibold ${getScoreColor(weighted || null)}`}
+                          >
+                            {score !== null
+                              ? `${weighted.toFixed(1)}%`
+                              : "--"}
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+              </TableBody>
+              <TableFooter>
+                <TableRow className="bg-gray-50">
+                  <TableCell
+                    colSpan={4}
+                    className="py-2.5 px-3 text-[13px] font-semibold text-gray-700 text-right"
+                  >
+                    Overall Weighted Score
+                  </TableCell>
+                  <TableCell
+                    colSpan={2}
+                    className="py-2.5 px-3 text-center"
+                  >
+                    <span
+                      className={`text-base font-bold ${getScoreColor(overallScore)}`}
+                    >
+                      {overallScore.toFixed(1)}%
+                    </span>
+                  </TableCell>
+                </TableRow>
+              </TableFooter>
+            </Table>
           </div>
 
           {/* Check-in comments section */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
             {/* Employee notes (read-only) */}
-            <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
-              <div className="px-5 py-3 border-b border-gray-100 bg-gray-50 flex items-center gap-2">
-                <User className="h-4 w-4 text-gray-500" />
-                <h3 className="text-sm font-semibold text-gray-700">
+            <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
+              <div className="px-4 py-2 border-b border-gray-100 bg-gray-50 flex items-center gap-2">
+                <User className="h-3.5 w-3.5 text-gray-500" />
+                <h3 className="text-[13px] font-semibold text-gray-700">
                   Employee Notes
                 </h3>
               </div>
-              <div className="p-5">
+              <div className="p-4">
                 {currentCheckIn?.employeeNotes ? (
-                  <div className="rounded-lg bg-gray-50 p-4">
-                    <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                  <div className="rounded-md bg-gray-50 p-3">
+                    <p className="text-[13px] text-gray-700 whitespace-pre-wrap">
                       {currentCheckIn.employeeNotes}
                     </p>
-                    <p className="text-xs text-gray-400 mt-2">
+                    <p className="text-[11px] text-gray-400 mt-2">
                       Last updated{" "}
                       {new Date(
                         currentCheckIn.checkedInAt
@@ -691,7 +572,7 @@ function ManagerCheckinsContent() {
                     </p>
                   </div>
                 ) : (
-                  <p className="text-sm text-gray-400 text-center py-4">
+                  <p className="text-[13px] text-gray-400 text-center py-4">
                     No employee notes for {selectedQuarter} yet.
                   </p>
                 )}
@@ -699,20 +580,20 @@ function ManagerCheckinsContent() {
             </div>
 
             {/* Manager comment */}
-            <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
-              <div className="px-5 py-3 border-b border-gray-100 bg-gray-50 flex items-center gap-2">
-                <MessageSquare className="h-4 w-4 text-indigo-500" />
-                <h3 className="text-sm font-semibold text-gray-700">
+            <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
+              <div className="px-4 py-2 border-b border-gray-100 bg-gray-50 flex items-center gap-2">
+                <MessageSquare className="h-3.5 w-3.5 text-indigo-500" />
+                <h3 className="text-[13px] font-semibold text-gray-700">
                   Your Comment
                 </h3>
               </div>
-              <div className="p-5">
+              <div className="p-4">
                 <textarea
                   value={managerComment}
                   onChange={(e) => setManagerComment(e.target.value)}
                   placeholder="Provide feedback on the employee's progress, guidance, or action items..."
                   rows={5}
-                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100 resize-none"
+                  className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-[13px] text-gray-900 placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-200 resize-none"
                 />
               </div>
             </div>
@@ -720,9 +601,9 @@ function ManagerCheckinsContent() {
 
           {/* Check-in history */}
           {goalSheet.checkIns && goalSheet.checkIns.length > 0 && (
-            <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
-              <div className="px-5 py-3 border-b border-gray-100 bg-gray-50">
-                <h3 className="text-sm font-semibold text-gray-700">
+            <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
+              <div className="px-4 py-2.5 border-b border-gray-100 bg-gray-50">
+                <h3 className="text-[13px] font-semibold text-gray-700">
                   Check-in History
                 </h3>
               </div>
@@ -734,51 +615,48 @@ function ManagerCheckinsContent() {
                       new Date(a.checkedInAt).getTime()
                   )
                   .map((ci) => (
-                    <div key={ci.id} className="p-4">
-                      <div className="flex items-center justify-between mb-2">
+                    <div key={ci.id} className="px-4 py-3">
+                      <div className="flex items-center justify-between mb-1.5">
                         <div className="flex items-center gap-2">
-                          <span className="inline-flex items-center rounded-full bg-indigo-100 text-indigo-700 px-2 py-0.5 text-xs font-medium">
-                            {ci.quarter}
-                          </span>
-                          <span className="text-xs text-gray-400">
-                            {new Date(ci.checkedInAt).toLocaleDateString(
-                              "en-US",
-                              {
-                                year: "numeric",
-                                month: "short",
-                                day: "numeric",
-                              }
-                            )}
+                          <StatusBadge status={ci.quarter} />
+                          <span className="text-[11px] text-gray-400">
+                            {new Date(
+                              ci.checkedInAt
+                            ).toLocaleDateString("en-US", {
+                              year: "numeric",
+                              month: "short",
+                              day: "numeric",
+                            })}
                           </span>
                         </div>
                         {ci.manager && (
-                          <span className="text-xs text-gray-400">
+                          <span className="text-[11px] text-gray-400">
                             Manager: {ci.manager.name}
                           </span>
                         )}
                       </div>
                       {ci.employeeNotes && (
-                        <div className="mb-2">
-                          <p className="text-xs font-medium text-gray-500 mb-0.5">
+                        <div className="mb-1.5">
+                          <p className="text-[11px] font-medium text-gray-500 mb-0.5">
                             Employee Notes
                           </p>
-                          <p className="text-sm text-gray-700">
+                          <p className="text-[13px] text-gray-700">
                             {ci.employeeNotes}
                           </p>
                         </div>
                       )}
                       {ci.managerComment && (
                         <div>
-                          <p className="text-xs font-medium text-indigo-600 mb-0.5">
+                          <p className="text-[11px] font-medium text-indigo-600 mb-0.5">
                             Manager Comment
                           </p>
-                          <p className="text-sm text-gray-700">
+                          <p className="text-[13px] text-gray-700">
                             {ci.managerComment}
                           </p>
                         </div>
                       )}
                       {!ci.employeeNotes && !ci.managerComment && (
-                        <p className="text-sm text-gray-400 italic">
+                        <p className="text-[13px] text-gray-400 italic">
                           No notes recorded
                         </p>
                       )}
@@ -795,13 +673,7 @@ function ManagerCheckinsContent() {
 
 export default function ManagerCheckinsPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="flex items-center justify-center py-20">
-          <div className="h-8 w-8 animate-spin rounded-full border-3 border-indigo-200 border-t-indigo-600" />
-        </div>
-      }
-    >
+    <Suspense fallback={<PageSkeleton />}>
       <ManagerCheckinsContent />
     </Suspense>
   );
