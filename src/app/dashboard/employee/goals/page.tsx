@@ -25,6 +25,7 @@ import {
 import { getUomLabel, formatTarget } from "@/lib/scoring";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { StatusBadge } from "@/components/shared/StatusBadge";
+import { WorkflowSteps } from "@/components/shared/WorkflowSteps";
 import { PageSkeleton } from "@/components/shared/LoadingSkeleton";
 import { EmptyState } from "@/components/shared/EmptyState";
 
@@ -445,6 +446,9 @@ export default function EmployeeGoalsPage() {
         }
       />
 
+      {/* Workflow Steps */}
+      {goalSheet && <WorkflowSteps currentStatus={goalSheet.status} />}
+
       {/* Weightage progress bar - compact */}
       <div className="rounded-lg border border-gray-200 bg-white px-4 py-2.5 flex items-center gap-4">
         <div className="flex items-center gap-2 shrink-0">
@@ -733,7 +737,7 @@ export default function EmployeeGoalsPage() {
       {isEditable && goals.length < GOAL_RULES.MAX_GOALS && (
         <button
           onClick={addGoal}
-          className="flex items-center gap-1 text-[13px] font-medium text-indigo-600 hover:text-indigo-700 transition-colors px-1 py-0.5"
+          className="flex items-center gap-1 text-[13px] font-medium text-blue-600 hover:text-blue-700 transition-colors px-1 py-0.5"
         >
           <Plus className="h-3.5 w-3.5" />
           Add goal

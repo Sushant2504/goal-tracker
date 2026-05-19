@@ -22,7 +22,7 @@ export function FilterBar({
           value={searchValue}
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder={searchPlaceholder}
-          className="w-full rounded-md border border-gray-200 bg-white pl-8 pr-3 py-1.5 text-[13px] text-gray-900 placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-200"
+          className="w-full rounded-md border border-gray-200 bg-white pl-8 pr-3 py-1.5 text-[13px] text-gray-900 placeholder:text-gray-400 focus:border-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-200"
         />
       </div>
       {children && (
@@ -47,7 +47,7 @@ export function FilterSelect({
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-[13px] text-gray-700 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-200"
+      className="rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-[13px] text-gray-700 focus:border-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-200"
     >
       <option value="">{placeholder}</option>
       {options.map((opt) => (

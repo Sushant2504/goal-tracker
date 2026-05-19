@@ -18,6 +18,9 @@ import { FilterBar, FilterSelect } from "@/components/shared/FilterBar";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { TableSkeleton } from "@/components/shared/LoadingSkeleton";
 import { PageSkeleton } from "@/components/shared/LoadingSkeleton";
+import { SortableHeader } from "@/components/shared/SortableHeader";
+import { useSortable } from "@/hooks/useSortable";
+import { ActiveFilters } from "@/components/shared/ActiveFilters";
 import {
   Download,
   Loader2,
@@ -171,8 +174,10 @@ export default function ReportsPage() {
     );
   });
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const paged = filtered.slice((page - 1) * pageSize, page * pageSize);
+  const { sortedData: sortedFiltered, sortConfig, requestSort } = useSortable<ReportRow>(filtered);
+
+  const totalPages = Math.max(1, Math.ceil(sortedFiltered.length / pageSize));
+  const paged = sortedFiltered.slice((page - 1) * pageSize, page * pageSize);
 
   const uniqueEmployees = new Set(reports.map((r) => r.employeeId)).size;
   const avgCompletion =
@@ -221,7 +226,7 @@ export default function ReportsPage() {
           title="Total Goals"
           value={reports.length}
           icon={Target}
-          iconClassName="bg-indigo-100"
+          iconClassName="bg-blue-100"
         />
         <StatCard
           title="Avg Completion"
@@ -285,6 +290,56 @@ export default function ReportsPage() {
         />
       </FilterBar>
 
+      <ActiveFilters
+        filters={[
+          ...(departmentFilter
+            ? [
+                {
+                  key: "department",
+                  label: "Department",
+                  value: departmentFilter,
+                  onRemove: () => {
+                    setDepartmentFilter("");
+                    setPage(1);
+                  },
+                },
+              ]
+            : []),
+          ...(quarterFilter
+            ? [
+                {
+                  key: "quarter",
+                  label: "Quarter",
+                  value: quarterFilter,
+                  onRemove: () => {
+                    setQuarterFilter("");
+                    setPage(1);
+                  },
+                },
+              ]
+            : []),
+          ...(searchQuery
+            ? [
+                {
+                  key: "search",
+                  label: "Search",
+                  value: searchQuery,
+                  onRemove: () => {
+                    setSearchQuery("");
+                    setPage(1);
+                  },
+                },
+              ]
+            : []),
+        ]}
+        onClearAll={() => {
+          setDepartmentFilter("");
+          setQuarterFilter("");
+          setSearchQuery("");
+          setPage(1);
+        }}
+      />
+
       {loading ? (
         <TableSkeleton rows={8} cols={9} />
       ) : filtered.length === 0 ? (
@@ -298,32 +353,32 @@ export default function ReportsPage() {
           <Table>
             <TableHeader>
               <TableRow className="bg-gray-50/80">
-                <TableHead className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold py-2 px-3">
-                  Employee
+                <TableHead className="py-2 px-3">
+                  <SortableHeader label="Employee" sortKey="employeeName" currentSort={sortConfig} onSort={requestSort} />
                 </TableHead>
-                <TableHead className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold py-2 px-3">
-                  Dept
+                <TableHead className="py-2 px-3">
+                  <SortableHeader label="Dept" sortKey="department" currentSort={sortConfig} onSort={requestSort} />
                 </TableHead>
-                <TableHead className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold py-2 px-3">
-                  Goal
+                <TableHead className="py-2 px-3">
+                  <SortableHeader label="Goal" sortKey="goalTitle" currentSort={sortConfig} onSort={requestSort} />
                 </TableHead>
-                <TableHead className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold py-2 px-3">
-                  Target
+                <TableHead className="py-2 px-3">
+                  <SortableHeader label="Target" sortKey="weightage" currentSort={sortConfig} onSort={requestSort} />
                 </TableHead>
-                <TableHead className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold py-2 px-3 text-center">
-                  Q1
+                <TableHead className="py-2 px-3 text-center">
+                  <SortableHeader label="Q1" sortKey="q1Score" currentSort={sortConfig} onSort={requestSort} />
                 </TableHead>
-                <TableHead className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold py-2 px-3 text-center">
-                  Q2
+                <TableHead className="py-2 px-3 text-center">
+                  <SortableHeader label="Q2" sortKey="q2Score" currentSort={sortConfig} onSort={requestSort} />
                 </TableHead>
-                <TableHead className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold py-2 px-3 text-center">
-                  Q3
+                <TableHead className="py-2 px-3 text-center">
+                  <SortableHeader label="Q3" sortKey="q3Score" currentSort={sortConfig} onSort={requestSort} />
                 </TableHead>
-                <TableHead className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold py-2 px-3 text-center">
-                  Q4
+                <TableHead className="py-2 px-3 text-center">
+                  <SortableHeader label="Q4" sortKey="q4Score" currentSort={sortConfig} onSort={requestSort} />
                 </TableHead>
-                <TableHead className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold py-2 px-3 text-center">
-                  Avg
+                <TableHead className="py-2 px-3 text-center">
+                  <SortableHeader label="Avg" sortKey="avgScore" currentSort={sortConfig} onSort={requestSort} />
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -400,8 +455,8 @@ export default function ReportsPage() {
               <div className="text-[11px] text-gray-500">
                 Showing {(page - 1) * pageSize + 1}
                 {" - "}
-                {Math.min(page * pageSize, filtered.length)} of{" "}
-                {filtered.length}
+                {Math.min(page * pageSize, sortedFiltered.length)} of{" "}
+                {sortedFiltered.length}
               </div>
               <div className="flex items-center gap-1.5">
                 <Button

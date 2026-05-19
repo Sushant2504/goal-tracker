@@ -21,6 +21,7 @@ import {
   ChevronLeft,
   Menu,
   Columns3,
+  Bell,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
@@ -38,35 +39,41 @@ type NavSection = {
 
 const employeeSections: NavSection[] = [
   {
+    title: "Planning",
     items: [
       { label: "Overview", href: "/dashboard", icon: LayoutDashboard },
       { label: "Board", href: "/dashboard/board", icon: Columns3 },
       { label: "My Goals", href: "/dashboard/employee/goals", icon: Goal },
       { label: "Check-ins", href: "/dashboard/employee/checkins", icon: ClipboardCheck },
+      { label: "Notifications", href: "/dashboard/notifications", icon: Bell },
     ],
   },
 ];
 
 const managerSections: NavSection[] = [
   {
+    title: "Planning",
     items: [
       { label: "Overview", href: "/dashboard", icon: LayoutDashboard },
       { label: "Board", href: "/dashboard/board", icon: Columns3 },
       { label: "My Team", href: "/dashboard/manager/team", icon: Users },
       { label: "Approve Goals", href: "/dashboard/manager/approve", icon: CheckCircle },
       { label: "Check-ins", href: "/dashboard/manager/checkins", icon: ClipboardCheck },
+      { label: "Notifications", href: "/dashboard/notifications", icon: Bell },
     ],
   },
 ];
 
 const adminSections: NavSection[] = [
   {
+    title: "Planning",
     items: [
       { label: "Overview", href: "/dashboard", icon: LayoutDashboard },
       { label: "Board", href: "/dashboard/board", icon: Columns3 },
       { label: "Employees", href: "/dashboard/admin/employees", icon: Users },
       { label: "Cycles", href: "/dashboard/admin/cycles", icon: CalendarRange },
       { label: "Shared Goals", href: "/dashboard/admin/shared-goals", icon: Share2 },
+      { label: "Notifications", href: "/dashboard/notifications", icon: Bell },
     ],
   },
   {
@@ -139,20 +146,20 @@ export function Sidebar({
         collapsed ? "w-[56px]" : "w-56"
       )}
     >
-      <div className="flex items-center justify-between h-12 px-3 border-b border-gray-200/80 shrink-0">
+      <div className="flex items-center justify-between h-12 px-3 bg-blue-700 shrink-0">
         <Link href="/dashboard" className="flex items-center gap-2 min-w-0">
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-indigo-600">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-white/20">
             <Target className="h-3.5 w-3.5 text-white" />
           </div>
           {!collapsed && (
-            <span className="text-[15px] font-bold text-gray-900 tracking-tight truncate">
-              GoalTracker
+            <span className="text-[15px] font-bold text-white tracking-tight truncate">
+              AtomBurg Nexus
             </span>
           )}
         </Link>
         <button
           onClick={onToggle}
-          className="hidden lg:flex h-6 w-6 shrink-0 items-center justify-center rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+          className="hidden lg:flex h-6 w-6 shrink-0 items-center justify-center rounded text-blue-200 hover:text-white hover:bg-white/10 transition-colors"
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
           {collapsed ? (
@@ -184,9 +191,9 @@ export function Sidebar({
                     key={item.href}
                     href={item.href}
                     className={cn(
-                      "flex items-center gap-2.5 rounded-md px-2 py-1.5 text-[13px] font-medium transition-colors relative",
+                      "flex items-center gap-2.5 rounded-md px-2 py-1.5 text-[13px] font-medium transition-all active:scale-[0.98] relative",
                       isActive
-                        ? "bg-indigo-50 text-indigo-700"
+                        ? "bg-blue-50 text-blue-700"
                         : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                     )}
                     title={collapsed ? item.label : undefined}
@@ -195,13 +202,13 @@ export function Sidebar({
                       className={cn(
                         "h-4 w-4 shrink-0 transition-colors",
                         isActive
-                          ? "text-indigo-600"
+                          ? "text-blue-600"
                           : "text-gray-400 group-hover:text-gray-600"
                       )}
                     />
                     {!collapsed && <span className="truncate">{item.label}</span>}
                     {isActive && (
-                      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[2px] h-4 bg-indigo-600 rounded-r-full" />
+                      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4 bg-blue-700 rounded-r-full animate-scale-in" />
                     )}
                   </Link>
                 );
@@ -218,7 +225,7 @@ export function Sidebar({
             collapsed ? "justify-center" : ""
           )}
         >
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-indigo-700 text-[11px] font-semibold">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-700 text-[11px] font-semibold">
             {getInitials(userName)}
           </div>
           {!collapsed && (
@@ -272,22 +279,22 @@ export function MobileSidebar({
         onClick={onClose}
       />
       <div className="fixed inset-y-0 left-0 z-50 w-60 bg-white shadow-xl lg:hidden flex flex-col">
-        <div className="flex items-center justify-between h-12 px-3 border-b border-gray-200/80 shrink-0">
+        <div className="flex items-center justify-between h-12 px-3 bg-blue-700 shrink-0">
           <Link
             href="/dashboard"
             className="flex items-center gap-2"
             onClick={onClose}
           >
-            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-indigo-600">
+            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-white/20">
               <Target className="h-3.5 w-3.5 text-white" />
             </div>
-            <span className="text-[15px] font-bold text-gray-900 tracking-tight">
-              GoalTracker
+            <span className="text-[15px] font-bold text-white tracking-tight">
+              AtomBurg Nexus
             </span>
           </Link>
           <button
             onClick={onClose}
-            className="h-6 w-6 flex items-center justify-center rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+            className="h-6 w-6 flex items-center justify-center rounded text-blue-200 hover:text-white hover:bg-white/10 transition-colors"
           >
             <ChevronLeft className="h-3.5 w-3.5" />
           </button>
@@ -315,21 +322,21 @@ export function MobileSidebar({
                       href={item.href}
                       onClick={onClose}
                       className={cn(
-                        "flex items-center gap-2.5 rounded-md px-2 py-1.5 text-[13px] font-medium transition-colors relative",
+                        "flex items-center gap-2.5 rounded-md px-2 py-1.5 text-[13px] font-medium transition-all active:scale-[0.98] relative",
                         isActive
-                          ? "bg-indigo-50 text-indigo-700"
+                          ? "bg-blue-50 text-blue-700"
                           : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                       )}
                     >
                       <item.icon
                         className={cn(
                           "h-4 w-4 shrink-0",
-                          isActive ? "text-indigo-600" : "text-gray-400"
+                          isActive ? "text-blue-600" : "text-gray-400"
                         )}
                       />
                       <span>{item.label}</span>
                       {isActive && (
-                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[2px] h-4 bg-indigo-600 rounded-r-full" />
+                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4 bg-blue-700 rounded-r-full animate-scale-in" />
                       )}
                     </Link>
                   );
@@ -341,7 +348,7 @@ export function MobileSidebar({
 
         <div className="border-t border-gray-200/80 p-2 shrink-0">
           <div className="flex items-center gap-2 rounded-md p-1.5">
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-indigo-700 text-[11px] font-semibold">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-700 text-[11px] font-semibold">
               {getInitials(userName)}
             </div>
             <div className="flex-1 min-w-0">

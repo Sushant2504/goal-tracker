@@ -1,3 +1,4 @@
+
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { SessionProvider } from "@/components/providers/SessionProvider";
@@ -17,9 +18,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "GoalTracker - Performance Goal Management",
+  title: "AtomBurg Nexus - Performance Goal Management",
   description:
     "Set, track, and achieve organizational goals with transparent tracking, real-time check-ins, and actionable insights.",
+  icons: { icon: "/favicon.svg" },
 };
 
 export default function RootLayout({

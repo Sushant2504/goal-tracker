@@ -13,12 +13,16 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = request.nextUrl;
     const unreadOnly = searchParams.get("unread") === "true";
+    const type = searchParams.get("type");
     const limit = parseInt(searchParams.get("limit") || "50", 10);
     const offset = parseInt(searchParams.get("offset") || "0", 10);
 
     const where: Record<string, unknown> = { userId: session.user.id };
     if (unreadOnly) {
       where.isRead = false;
+    }
+    if (type) {
+      where.type = type;
     }
 
     const [notifications, total, unreadCount] = await Promise.all([
@@ -87,6 +91,42 @@ export async function PATCH(request: NextRequest) {
     return Response.json({ message: "Notifications marked as read" });
   } catch (error) {
     console.error("PATCH /api/notifications error:", error);
+    return Response.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+// DELETE /api/notifications - Delete notifications
+export async function DELETE(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return Response.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const { notificationId, clearRead } = body;
+
+    if (clearRead) {
+      await prisma.notification.deleteMany({
+        where: { userId: session.user.id, isRead: true },
+      });
+      return Response.json({ message: "Read notifications cleared" });
+    }
+
+    if (!notificationId) {
+      return Response.json(
+        { error: "notificationId or clearRead is required" },
+        { status: 400 }
+      );
+    }
+
+    await prisma.notification.deleteMany({
+      where: { id: notificationId, userId: session.user.id },
+    });
+
+    return Response.json({ message: "Notification deleted" });
+  } catch (error) {
+    console.error("DELETE /api/notifications error:", error);
     return Response.json({ error: "Internal server error" }, { status: 500 });
   }
 }

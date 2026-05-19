@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,8 @@ import { FilterBar, FilterSelect } from "@/components/shared/FilterBar";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { TableSkeleton } from "@/components/shared/LoadingSkeleton";
 import { PageSkeleton } from "@/components/shared/LoadingSkeleton";
+import { SortableHeader } from "@/components/shared/SortableHeader";
+import { useSortable } from "@/hooks/useSortable";
 import {
   ScrollText,
   ChevronLeft,
@@ -136,6 +138,19 @@ export default function AuditLogPage() {
     });
   }
 
+  // Flatten log data for sorting
+  const flatLogs = useMemo(() => {
+    return logs.map((entry) => ({
+      ...entry,
+      _user: entry.user?.name || "System",
+      _action: entry.action,
+      _entity: entry.entityType,
+      _date: entry.timestamp,
+    }));
+  }, [logs]);
+
+  const { sortedData: sortedLogs, sortConfig, requestSort } = useSortable(flatLogs);
+
   if (authStatus === "loading") {
     return <PageSkeleton />;
   }
@@ -187,17 +202,17 @@ export default function AuditLogPage() {
           <Table>
             <TableHeader>
               <TableRow className="bg-gray-50/80">
-                <TableHead className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold py-2 px-3">
-                  Timestamp
+                <TableHead className="py-2 px-3">
+                  <SortableHeader label="Timestamp" sortKey="_date" currentSort={sortConfig} onSort={requestSort} />
                 </TableHead>
-                <TableHead className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold py-2 px-3">
-                  User
+                <TableHead className="py-2 px-3">
+                  <SortableHeader label="User" sortKey="_user" currentSort={sortConfig} onSort={requestSort} />
                 </TableHead>
-                <TableHead className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold py-2 px-3">
-                  Action
+                <TableHead className="py-2 px-3">
+                  <SortableHeader label="Action" sortKey="_action" currentSort={sortConfig} onSort={requestSort} />
                 </TableHead>
-                <TableHead className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold py-2 px-3">
-                  Entity
+                <TableHead className="py-2 px-3">
+                  <SortableHeader label="Entity" sortKey="_entity" currentSort={sortConfig} onSort={requestSort} />
                 </TableHead>
                 <TableHead className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold py-2 px-3">
                   Entity ID
@@ -206,7 +221,7 @@ export default function AuditLogPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {logs.map((entry) => (
+              {sortedLogs.map((entry) => (
                 <TableRow key={entry.id}>
                   <TableCell className="py-2 px-3 text-[13px] text-gray-600 whitespace-nowrap">
                     {formatTimestamp(entry.timestamp)}

@@ -27,7 +27,7 @@ export function PageHeader({
   actions?: React.ReactNode;
 }) {
   return (
-    <div className="space-y-1 mb-5">
+    <div className="space-y-1 mb-4 animate-fade-in-up">
       <Breadcrumb>
         <BreadcrumbList className="text-xs">
           {breadcrumbs.map((crumb, i) => (

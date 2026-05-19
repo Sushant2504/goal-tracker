@@ -37,7 +37,7 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen">
       {/* Left panel - branding */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-indigo-600 via-indigo-700 to-blue-800 flex-col justify-between p-12 text-white relative overflow-hidden">
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-blue-700 via-blue-800 to-blue-800 flex-col justify-between p-12 text-white relative overflow-hidden">
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-20 left-20 w-72 h-72 bg-white rounded-full blur-3xl" />
           <div className="absolute bottom-20 right-20 w-96 h-96 bg-blue-300 rounded-full blur-3xl" />
@@ -48,9 +48,9 @@ export default function LoginPage() {
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/20 backdrop-blur-sm">
               <Target className="h-6 w-6 text-white" />
             </div>
-            <span className="text-2xl font-bold tracking-tight">GoalTracker</span>
+            <span className="text-2xl font-bold tracking-tight">AtomBurg Nexus</span>
           </div>
-          <p className="text-indigo-200 text-sm mt-1">Performance Goal Management</p>
+          <p className="text-blue-200 text-sm mt-1">Performance Goal Management</p>
         </div>
 
         <div className="relative z-10 space-y-8">
@@ -62,7 +62,7 @@ export default function LoginPage() {
               <br />
               Achieve results.
             </h1>
-            <p className="text-indigo-200 text-lg max-w-md">
+            <p className="text-blue-200 text-lg max-w-md">
               Streamline your organization&apos;s goal-setting process with
               transparent tracking, real-time check-ins, and actionable insights.
             </p>
@@ -71,21 +71,21 @@ export default function LoginPage() {
           <div className="grid grid-cols-3 gap-4">
             <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
               <div className="text-3xl font-bold">95%</div>
-              <div className="text-indigo-200 text-sm mt-1">Goal completion rate</div>
+              <div className="text-blue-200 text-sm mt-1">Goal completion rate</div>
             </div>
             <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
               <div className="text-3xl font-bold">2x</div>
-              <div className="text-indigo-200 text-sm mt-1">Faster reviews</div>
+              <div className="text-blue-200 text-sm mt-1">Faster reviews</div>
             </div>
             <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
               <div className="text-3xl font-bold">100%</div>
-              <div className="text-indigo-200 text-sm mt-1">Visibility</div>
+              <div className="text-blue-200 text-sm mt-1">Visibility</div>
             </div>
           </div>
         </div>
 
-        <div className="relative z-10 text-indigo-300 text-sm">
-          &copy; {new Date().getFullYear()} GoalTracker. All rights reserved.
+        <div className="relative z-10 text-blue-300 text-sm">
+          &copy; {new Date().getFullYear()} AtomBurg Nexus. All rights reserved.
         </div>
       </div>
 
@@ -94,10 +94,10 @@ export default function LoginPage() {
         <div className="w-full max-w-md space-y-8">
           {/* Mobile logo */}
           <div className="lg:hidden flex items-center gap-3 justify-center mb-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-600">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-700">
               <Target className="h-6 w-6 text-white" />
             </div>
-            <span className="text-2xl font-bold tracking-tight text-gray-900">GoalTracker</span>
+            <span className="text-2xl font-bold tracking-tight text-gray-900">AtomBurg Nexus</span>
           </div>
 
           <div className="text-center lg:text-left">
@@ -131,7 +131,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@company.com"
-                className="block w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 placeholder:text-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition-colors text-sm"
+                className="block w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 placeholder:text-gray-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 focus:outline-none transition-colors text-sm"
               />
             </div>
 
@@ -153,7 +153,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter your password"
-                  className="block w-full rounded-lg border border-gray-300 bg-white px-4 py-3 pr-12 text-gray-900 placeholder:text-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition-colors text-sm"
+                  className="block w-full rounded-lg border border-gray-300 bg-white px-4 py-3 pr-12 text-gray-900 placeholder:text-gray-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 focus:outline-none transition-colors text-sm"
                 />
                 <button
                   type="button"
@@ -172,7 +172,7 @@ export default function LoginPage() {
             <Button
               type="submit"
               disabled={loading}
-              className="w-full h-12 bg-indigo-600 text-white hover:bg-indigo-700 focus:ring-indigo-500 text-base font-medium rounded-lg transition-colors"
+              className="w-full h-12 bg-blue-700 text-white hover:bg-blue-800 focus:ring-blue-600 text-base font-medium rounded-lg transition-colors"
             >
               {loading ? (
                 <>

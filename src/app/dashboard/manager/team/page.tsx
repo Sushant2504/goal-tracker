@@ -26,6 +26,9 @@ import { UserAvatar } from "@/components/shared/UserAvatar";
 import { FilterBar, FilterSelect } from "@/components/shared/FilterBar";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { PageSkeleton } from "@/components/shared/LoadingSkeleton";
+import { SortableHeader } from "@/components/shared/SortableHeader";
+import { useSortable } from "@/hooks/useSortable";
+import { HoverPreviewCard } from "@/components/shared/HoverCard";
 import {
   Users,
   CheckCircle2,
@@ -128,6 +131,19 @@ export default function ManagerTeamPage() {
     });
   }, [teamSheets, searchQuery, departmentFilter]);
 
+  // Create flattened data for sorting
+  const flatSheets = useMemo(() => {
+    return filteredSheets.map((s) => ({
+      ...s,
+      _name: s.employee.name,
+      _department: s.employee.department || "",
+      _status: s.status,
+      _goals: s.goals.length,
+    }));
+  }, [filteredSheets]);
+
+  const { sortedData: sortedSheets, sortConfig, requestSort } = useSortable(flatSheets);
+
   const totalMembers = new Set(teamSheets.map((s) => s.employeeId)).size;
   const submittedCount = teamSheets.filter(
     (s) => s.status === "SUBMITTED"
@@ -186,7 +202,7 @@ export default function ManagerTeamPage() {
           title="Total Members"
           value={totalMembers}
           icon={Users}
-          iconClassName="bg-indigo-100"
+          iconClassName="bg-blue-100"
         />
         <StatCard
           title="Pending Approval"
@@ -280,7 +296,7 @@ export default function ManagerTeamPage() {
       </FilterBar>
 
       {/* Team members table */}
-      {filteredSheets.length === 0 ? (
+      {sortedSheets.length === 0 ? (
         <EmptyState
           icon={Users}
           title={
@@ -299,17 +315,17 @@ export default function ManagerTeamPage() {
           <Table>
             <TableHeader>
               <TableRow className="bg-gray-50/80">
-                <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 py-2 px-3">
-                  Team Member
+                <TableHead className="py-2 px-3">
+                  <SortableHeader label="Team Member" sortKey="_name" currentSort={sortConfig} onSort={requestSort} />
                 </TableHead>
-                <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 py-2 px-3">
-                  Department
+                <TableHead className="py-2 px-3">
+                  <SortableHeader label="Department" sortKey="_department" currentSort={sortConfig} onSort={requestSort} />
                 </TableHead>
-                <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 py-2 px-3">
-                  Sheet Status
+                <TableHead className="py-2 px-3">
+                  <SortableHeader label="Sheet Status" sortKey="_status" currentSort={sortConfig} onSort={requestSort} />
                 </TableHead>
-                <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 py-2 px-3 text-center">
-                  Goals
+                <TableHead className="py-2 px-3 text-center">
+                  <SortableHeader label="Goals" sortKey="_goals" currentSort={sortConfig} onSort={requestSort} />
                 </TableHead>
                 <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 py-2 px-3 text-right">
                   Actions
@@ -317,15 +333,29 @@ export default function ManagerTeamPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredSheets.map((sheet) => (
+              {sortedSheets.map((sheet) => (
                 <TableRow key={sheet.id} className="hover:bg-gray-50/50">
                   <TableCell className="py-2 px-3">
                     <div className="flex items-center gap-2.5">
-                      <UserAvatar name={sheet.employee.name} size="sm" />
+                      <UserAvatar
+                        name={sheet.employee.name}
+                        size="sm"
+                        showTooltip
+                        department={sheet.employee.department || undefined}
+                      />
                       <div className="min-w-0">
-                        <p className="text-[13px] font-medium text-gray-900 truncate">
-                          {sheet.employee.name}
-                        </p>
+                        <HoverPreviewCard
+                          title={sheet.employee.name}
+                          subtitle={sheet.employee.department || undefined}
+                          stats={[
+                            { label: "Goals", value: sheet.goals.length },
+                            { label: "Status", value: sheet.status },
+                          ]}
+                        >
+                          <p className="text-[13px] font-medium text-gray-900 truncate">
+                            {sheet.employee.name}
+                          </p>
+                        </HoverPreviewCard>
                         <p className="text-[11px] text-gray-500 truncate">
                           {sheet.employee.email}
                         </p>

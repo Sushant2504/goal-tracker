@@ -419,7 +419,7 @@ function ManagerCheckinsContent() {
               title={`Weighted Score (${selectedQuarter})`}
               value={`${overallScore.toFixed(1)}%`}
               icon={TrendingUp}
-              iconClassName="bg-indigo-100"
+              iconClassName="bg-blue-100"
             />
 
             <StatCard
@@ -582,7 +582,7 @@ function ManagerCheckinsContent() {
             {/* Manager comment */}
             <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
               <div className="px-4 py-2 border-b border-gray-100 bg-gray-50 flex items-center gap-2">
-                <MessageSquare className="h-3.5 w-3.5 text-indigo-500" />
+                <MessageSquare className="h-3.5 w-3.5 text-blue-600" />
                 <h3 className="text-[13px] font-semibold text-gray-700">
                   Your Comment
                 </h3>
@@ -593,7 +593,7 @@ function ManagerCheckinsContent() {
                   onChange={(e) => setManagerComment(e.target.value)}
                   placeholder="Provide feedback on the employee's progress, guidance, or action items..."
                   rows={5}
-                  className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-[13px] text-gray-900 placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-200 resize-none"
+                  className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-[13px] text-gray-900 placeholder:text-gray-400 focus:border-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-200 resize-none"
                 />
               </div>
             </div>
@@ -647,7 +647,7 @@ function ManagerCheckinsContent() {
                       )}
                       {ci.managerComment && (
                         <div>
-                          <p className="text-[11px] font-medium text-indigo-600 mb-0.5">
+                          <p className="text-[11px] font-medium text-blue-600 mb-0.5">
                             Manager Comment
                           </p>
                           <p className="text-[13px] text-gray-700">

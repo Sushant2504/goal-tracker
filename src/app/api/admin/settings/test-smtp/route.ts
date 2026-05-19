@@ -31,9 +31,9 @@ export async function POST(request: NextRequest) {
       await transporter.sendMail({
         from: smtpFrom,
         to: recipientEmail,
-        subject: "GoalTracker - SMTP Test",
-        text: "This is a test email from GoalTracker to verify SMTP settings.",
-        html: "<h2>GoalTracker SMTP Test</h2><p>Your SMTP settings are configured correctly.</p>",
+        subject: "AtomBurg Nexus - SMTP Test",
+        text: "This is a test email from AtomBurg Nexus to verify SMTP settings.",
+        html: "<h2>AtomBurg Nexus SMTP Test</h2><p>Your SMTP settings are configured correctly.</p>",
       });
 
       return Response.json({ success: true, message: "Test email sent successfully" });

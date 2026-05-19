@@ -25,6 +25,9 @@ import {
   ChevronDown,
   Edit3,
   Save,
+  Square,
+  CheckSquare,
+  Minus,
 } from "lucide-react";
 import { getUomLabel, formatTarget } from "@/lib/scoring";
 import { GOAL_RULES } from "@/lib/validation";
@@ -95,6 +98,10 @@ function ManagerApproveContent() {
   const [selectedSheetId, setSelectedSheetId] = useState<string | null>(
     sheetId
   );
+  const [bulkSelected, setBulkSelected] = useState<Set<string>>(new Set());
+  const [bulkProcessing, setBulkProcessing] = useState(false);
+  const [showBulkReturnDialog, setShowBulkReturnDialog] = useState(false);
+  const [bulkReturnComment, setBulkReturnComment] = useState("");
 
   // Load submitted sheets if no specific sheetId
   useEffect(() => {
@@ -312,6 +319,122 @@ function ManagerApproveContent() {
     }
   }
 
+  function toggleBulkSelect(id: string) {
+    setBulkSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    if (bulkSelected.size === submittedSheets.length) {
+      setBulkSelected(new Set());
+    } else {
+      setBulkSelected(new Set(submittedSheets.map((s) => s.id)));
+    }
+  }
+
+  async function handleBulkApprove() {
+    if (bulkSelected.size === 0) return;
+    setBulkProcessing(true);
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const id of bulkSelected) {
+      try {
+        const res = await fetch(`/api/goal-sheets/${id}/approve`, {
+          method: "POST",
+        });
+        if (res.ok) {
+          successCount++;
+        } else {
+          failCount++;
+        }
+      } catch {
+        failCount++;
+      }
+    }
+
+    setBulkSelected(new Set());
+    setBulkProcessing(false);
+
+    if (successCount > 0) {
+      toast.success(`${successCount} goal sheet${successCount !== 1 ? "s" : ""} approved`);
+    }
+    if (failCount > 0) {
+      toast.error(`${failCount} sheet${failCount !== 1 ? "s" : ""} failed to approve`);
+    }
+
+    // Refresh data
+    setSubmittedSheets((prev) =>
+      prev.filter((s) => !bulkSelected.has(s.id))
+    );
+    const remaining = submittedSheets.filter((s) => !bulkSelected.has(s.id));
+    if (remaining.length > 0) {
+      setSelectedSheetId(remaining[0].id);
+    } else {
+      setSelectedSheetId(null);
+      setGoalSheet(null);
+    }
+  }
+
+  async function handleBulkReturn() {
+    if (bulkSelected.size === 0 || !bulkReturnComment.trim()) {
+      toast.error("Please provide a comment for returning the goal sheets.");
+      return;
+    }
+    setBulkProcessing(true);
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const id of bulkSelected) {
+      try {
+        const res = await fetch(`/api/goal-sheets/${id}/return`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ comment: bulkReturnComment.trim() }),
+        });
+        if (res.ok) {
+          successCount++;
+        } else {
+          failCount++;
+        }
+      } catch {
+        failCount++;
+      }
+    }
+
+    const selectedIds = new Set(bulkSelected);
+    setBulkSelected(new Set());
+    setBulkProcessing(false);
+    setShowBulkReturnDialog(false);
+    setBulkReturnComment("");
+
+    if (successCount > 0) {
+      toast.success(
+        `${successCount} goal sheet${successCount !== 1 ? "s" : ""} returned for revision`
+      );
+    }
+    if (failCount > 0) {
+      toast.error(`${failCount} sheet${failCount !== 1 ? "s" : ""} failed to return`);
+    }
+
+    // Refresh data
+    setSubmittedSheets((prev) => prev.filter((s) => !selectedIds.has(s.id)));
+    const remaining = submittedSheets.filter((s) => !selectedIds.has(s.id));
+    if (remaining.length > 0) {
+      setSelectedSheetId(remaining[0].id);
+    } else {
+      setSelectedSheetId(null);
+      setGoalSheet(null);
+    }
+  }
+
   if (loading) {
     return <PageSkeleton />;
   }
@@ -370,6 +493,54 @@ function ManagerApproveContent() {
         }
       />
 
+      {/* Bulk return comment dialog */}
+      <Dialog
+        open={showBulkReturnDialog}
+        onOpenChange={(open) => {
+          setShowBulkReturnDialog(open);
+          if (!open) setBulkReturnComment("");
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Return {bulkSelected.size} Sheet{bulkSelected.size !== 1 ? "s" : ""} for Revision</DialogTitle>
+            <DialogDescription>
+              This comment will be applied to all {bulkSelected.size} selected sheet{bulkSelected.size !== 1 ? "s" : ""}.
+            </DialogDescription>
+          </DialogHeader>
+          <textarea
+            value={bulkReturnComment}
+            onChange={(e) => setBulkReturnComment(e.target.value)}
+            placeholder="Enter your feedback..."
+            rows={4}
+            className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-[13px] text-gray-900 placeholder:text-gray-400 focus:border-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-200 resize-none"
+            autoFocus
+          />
+          <DialogFooter>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setShowBulkReturnDialog(false);
+                setBulkReturnComment("");
+              }}
+              disabled={bulkProcessing}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleBulkReturn}
+              disabled={bulkProcessing || !bulkReturnComment.trim()}
+            >
+              <RotateCcw className="h-3.5 w-3.5 mr-1" />
+              {bulkProcessing ? "Returning..." : "Return All"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Return comment dialog */}
       <Dialog
         open={showReturnDialog}
@@ -391,7 +562,7 @@ function ManagerApproveContent() {
             onChange={(e) => setReturnComment(e.target.value)}
             placeholder="Enter your feedback..."
             rows={4}
-            className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-[13px] text-gray-900 placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-200 resize-none"
+            className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-[13px] text-gray-900 placeholder:text-gray-400 focus:border-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-200 resize-none"
             autoFocus
           />
           <DialogFooter>
@@ -419,24 +590,64 @@ function ManagerApproveContent() {
         </DialogContent>
       </Dialog>
 
-      {/* Sheet selector tabs */}
+      {/* Sheet selector with checkboxes */}
       {submittedSheets.length > 1 && (
-        <Tabs
-          value={selectedSheetId || undefined}
-          onValueChange={(value) => {
-            setSelectedSheetId(value as string);
-            setIsEditing(false);
-          }}
-        >
-          <TabsList variant="line">
-            {submittedSheets.map((sheet) => (
-              <TabsTrigger key={sheet.id} value={sheet.id}>
-                <UserAvatar name={sheet.employee.name} size="xs" />
-                <span className="text-[13px]">{sheet.employee.name}</span>
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
+        <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
+          <div className="flex items-center gap-3 px-3 py-2 border-b border-gray-100 bg-gray-50/80">
+            <button
+              onClick={toggleSelectAll}
+              className="flex items-center justify-center text-gray-500 hover:text-blue-600 transition-colors"
+              aria-label={bulkSelected.size === submittedSheets.length ? "Deselect all" : "Select all"}
+            >
+              {bulkSelected.size === submittedSheets.length ? (
+                <CheckSquare className="h-4 w-4 text-blue-600" />
+              ) : bulkSelected.size > 0 ? (
+                <Minus className="h-4 w-4 text-blue-600" />
+              ) : (
+                <Square className="h-4 w-4" />
+              )}
+            </button>
+            <span className="text-[12px] text-gray-500 font-medium">
+              {bulkSelected.size > 0
+                ? `${bulkSelected.size} of ${submittedSheets.length} selected`
+                : "Select sheets for bulk actions"}
+            </span>
+          </div>
+          <Tabs
+            value={selectedSheetId || undefined}
+            onValueChange={(value) => {
+              setSelectedSheetId(value as string);
+              setIsEditing(false);
+            }}
+          >
+            <div className="px-3">
+              <TabsList variant="line">
+                {submittedSheets.map((sheet) => (
+                  <div key={sheet.id} className="flex items-center gap-1.5">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleBulkSelect(sheet.id);
+                      }}
+                      className="flex items-center justify-center text-gray-400 hover:text-blue-600 transition-colors"
+                      aria-label={bulkSelected.has(sheet.id) ? `Deselect ${sheet.employee.name}` : `Select ${sheet.employee.name}`}
+                    >
+                      {bulkSelected.has(sheet.id) ? (
+                        <CheckSquare className="h-3.5 w-3.5 text-blue-600" />
+                      ) : (
+                        <Square className="h-3.5 w-3.5" />
+                      )}
+                    </button>
+                    <TabsTrigger value={sheet.id}>
+                      <UserAvatar name={sheet.employee.name} size="xs" />
+                      <span className="text-[13px]">{sheet.employee.name}</span>
+                    </TabsTrigger>
+                  </div>
+                ))}
+              </TabsList>
+            </div>
+          </Tabs>
+        </div>
       )}
 
       {goalSheet && (
@@ -561,7 +772,7 @@ function ManagerApproveContent() {
                       Goal {index + 1}
                     </span>
                     <div className="flex items-center gap-2">
-                      <span className="text-[11px] rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200 px-1.5 py-0.5 font-medium">
+                      <span className="text-[11px] rounded-md bg-blue-50 text-blue-700 border border-blue-200 px-1.5 py-0.5 font-medium">
                         {goal.thrustArea}
                       </span>
                       <span className="text-[11px] text-gray-500">
@@ -589,7 +800,7 @@ function ManagerApproveContent() {
                                 )
                               }
                               disabled={goal.titleReadOnly}
-                              className="w-full rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-[13px] disabled:bg-gray-50 disabled:text-gray-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-200"
+                              className="w-full rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-[13px] disabled:bg-gray-50 disabled:text-gray-500 focus:border-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-200"
                             />
                           </div>
                           <div>
@@ -611,7 +822,7 @@ function ManagerApproveContent() {
                                 )
                               }
                               disabled={goal.targetReadOnly}
-                              className="w-full rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-[13px] disabled:bg-gray-50 disabled:text-gray-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-200"
+                              className="w-full rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-[13px] disabled:bg-gray-50 disabled:text-gray-500 focus:border-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-200"
                             />
                           </div>
                         </div>
@@ -633,7 +844,7 @@ function ManagerApproveContent() {
                                     e.target.value
                                   )
                                 }
-                                className="w-full appearance-none rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-[13px] focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-200 pr-8"
+                                className="w-full appearance-none rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-[13px] focus:border-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-200 pr-8"
                               >
                                 {UOM_TYPES.map((u) => (
                                   <option key={u.value} value={u.value}>
@@ -663,7 +874,7 @@ function ManagerApproveContent() {
                                   parseInt(e.target.value) || 0
                                 )
                               }
-                              className="w-full rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-[13px] focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-200"
+                              className="w-full rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-[13px] focus:border-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-200"
                             />
                           </div>
                         </div>
@@ -735,6 +946,44 @@ function ManagerApproveContent() {
             </div>
           )}
         </>
+      )}
+
+      {/* Floating bulk action bar */}
+      {bulkSelected.size > 0 && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl px-4 py-2.5 flex items-center gap-3">
+          <span className="text-[13px] font-medium text-gray-700 dark:text-gray-300">
+            {bulkSelected.size} selected
+          </span>
+          <div className="h-4 w-px bg-gray-200 dark:bg-gray-700" />
+          <Button
+            size="sm"
+            onClick={handleBulkApprove}
+            disabled={bulkProcessing}
+            className="bg-blue-700 text-white hover:bg-blue-800"
+          >
+            <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
+            {bulkProcessing ? "Processing..." : "Approve All"}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowBulkReturnDialog(true)}
+            disabled={bulkProcessing}
+            className="bg-white text-red-600 border-red-200 hover:bg-red-50 dark:bg-gray-800 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-950"
+          >
+            <RotateCcw className="h-3.5 w-3.5 mr-1" />
+            Return All
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setBulkSelected(new Set())}
+            disabled={bulkProcessing}
+            className="text-gray-500"
+          >
+            Cancel
+          </Button>
+        </div>
       )}
     </div>
   );

@@ -195,7 +195,7 @@ export function CommandPalette() {
                   key={item.href}
                   value={item.label}
                   onSelect={() => navigate(item.href)}
-                  className="flex items-center gap-2.5 rounded-md px-2 py-1.5 text-[13px] text-gray-700 cursor-pointer data-[selected=true]:bg-indigo-50 data-[selected=true]:text-indigo-700 dark:text-gray-300 dark:data-[selected=true]:bg-indigo-950 dark:data-[selected=true]:text-indigo-300"
+                  className="flex items-center gap-2.5 rounded-md px-2 py-1.5 text-[13px] text-gray-700 cursor-pointer data-[selected=true]:bg-blue-50 data-[selected=true]:text-blue-700 dark:text-gray-300 dark:data-[selected=true]:bg-blue-950 dark:data-[selected=true]:text-blue-300"
                 >
                   <item.icon className="h-4 w-4 shrink-0 text-gray-400" />
                   <span className="flex-1 truncate">{item.label}</span>
@@ -223,7 +223,7 @@ export function CommandPalette() {
                         key={emp.id}
                         value={`search-employee-${emp.id}`}
                         onSelect={() => navigate(`/dashboard/admin/employees`)}
-                        className="flex items-center gap-2.5 rounded-md px-2 py-1.5 text-[13px] text-gray-700 cursor-pointer data-[selected=true]:bg-indigo-50 data-[selected=true]:text-indigo-700 dark:text-gray-300 dark:data-[selected=true]:bg-indigo-950 dark:data-[selected=true]:text-indigo-300"
+                        className="flex items-center gap-2.5 rounded-md px-2 py-1.5 text-[13px] text-gray-700 cursor-pointer data-[selected=true]:bg-blue-50 data-[selected=true]:text-blue-700 dark:text-gray-300 dark:data-[selected=true]:bg-blue-950 dark:data-[selected=true]:text-blue-300"
                       >
                         <User className="h-4 w-4 shrink-0 text-gray-400" />
                         <span className="flex-1 truncate">{emp.name}</span>
@@ -245,7 +245,7 @@ export function CommandPalette() {
                         key={goal.id}
                         value={`search-goal-${goal.id}`}
                         onSelect={() => navigate(`/dashboard/employee/goals`)}
-                        className="flex items-center gap-2.5 rounded-md px-2 py-1.5 text-[13px] text-gray-700 cursor-pointer data-[selected=true]:bg-indigo-50 data-[selected=true]:text-indigo-700 dark:text-gray-300 dark:data-[selected=true]:bg-indigo-950 dark:data-[selected=true]:text-indigo-300"
+                        className="flex items-center gap-2.5 rounded-md px-2 py-1.5 text-[13px] text-gray-700 cursor-pointer data-[selected=true]:bg-blue-50 data-[selected=true]:text-blue-700 dark:text-gray-300 dark:data-[selected=true]:bg-blue-950 dark:data-[selected=true]:text-blue-300"
                       >
                         <Target className="h-4 w-4 shrink-0 text-gray-400" />
                         <span className="flex-1 truncate">{goal.title}</span>
@@ -267,7 +267,7 @@ export function CommandPalette() {
                         key={cycle.id}
                         value={`search-cycle-${cycle.id}`}
                         onSelect={() => navigate(`/dashboard/admin/cycles`)}
-                        className="flex items-center gap-2.5 rounded-md px-2 py-1.5 text-[13px] text-gray-700 cursor-pointer data-[selected=true]:bg-indigo-50 data-[selected=true]:text-indigo-700 dark:text-gray-300 dark:data-[selected=true]:bg-indigo-950 dark:data-[selected=true]:text-indigo-300"
+                        className="flex items-center gap-2.5 rounded-md px-2 py-1.5 text-[13px] text-gray-700 cursor-pointer data-[selected=true]:bg-blue-50 data-[selected=true]:text-blue-700 dark:text-gray-300 dark:data-[selected=true]:bg-blue-950 dark:data-[selected=true]:text-blue-300"
                       >
                         <CalendarRange className="h-4 w-4 shrink-0 text-gray-400" />
                         <span className="flex-1 truncate">{cycle.name}</span>
@@ -290,7 +290,7 @@ export function CommandPalette() {
               <Command.Item
                 value="Toggle Dark Mode"
                 onSelect={handleToggleTheme}
-                className="flex items-center gap-2.5 rounded-md px-2 py-1.5 text-[13px] text-gray-700 cursor-pointer data-[selected=true]:bg-indigo-50 data-[selected=true]:text-indigo-700 dark:text-gray-300 dark:data-[selected=true]:bg-indigo-950 dark:data-[selected=true]:text-indigo-300"
+                className="flex items-center gap-2.5 rounded-md px-2 py-1.5 text-[13px] text-gray-700 cursor-pointer data-[selected=true]:bg-blue-50 data-[selected=true]:text-blue-700 dark:text-gray-300 dark:data-[selected=true]:bg-blue-950 dark:data-[selected=true]:text-blue-300"
               >
                 <Moon className="h-4 w-4 shrink-0 text-gray-400" />
                 <span className="flex-1">Toggle Dark Mode</span>

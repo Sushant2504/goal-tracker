@@ -14,6 +14,7 @@ import { StatusBadge } from "@/components/shared/StatusBadge";
 import { GoalAccordion } from "./GoalAccordion";
 import { ActivityTimeline, Activity } from "./ActivityTimeline";
 import { CommentSection } from "./CommentSection";
+import { WorkflowSteps } from "@/components/shared/WorkflowSteps";
 import { Loader2, Calendar, FileText, Target } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
@@ -163,6 +164,9 @@ export function GoalDetailPanel({
             </SheetHeader>
 
             <div className="px-4 pb-4 flex-1">
+              <div className="animate-fade-in-up">
+                <WorkflowSteps currentStatus={sheet.status} />
+              </div>
               <Tabs
                 value={activeTab}
                 onValueChange={(val: string | number | null) =>

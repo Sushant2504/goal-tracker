@@ -2,14 +2,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export function TableSkeleton({ rows = 5, cols = 4 }: { rows?: number; cols?: number }) {
   return (
-    <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
-      <div className="border-b border-gray-100 px-4 py-3 flex gap-6">
+    <div className="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden">
+      <div className="border-b border-gray-100 dark:border-gray-800 px-4 py-3 flex gap-6">
         {Array.from({ length: cols }).map((_, i) => (
           <Skeleton key={i} className="h-3 w-24" />
         ))}
       </div>
       {Array.from({ length: rows }).map((_, i) => (
-        <div key={i} className="border-b border-gray-50 px-4 py-3 flex gap-6 items-center">
+        <div key={i} className="border-b border-gray-50 dark:border-gray-800/50 px-4 py-3 flex gap-6 items-center">
           {Array.from({ length: cols }).map((_, j) => (
             <Skeleton key={j} className="h-3 w-20" />
           ))}
@@ -21,7 +21,7 @@ export function TableSkeleton({ rows = 5, cols = 4 }: { rows?: number; cols?: nu
 
 export function CardSkeleton() {
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-4 space-y-3">
+    <div className="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
       <Skeleton className="h-3 w-24" />
       <Skeleton className="h-6 w-16" />
       <Skeleton className="h-2 w-32" />

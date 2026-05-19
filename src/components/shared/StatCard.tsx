@@ -14,7 +14,7 @@ export function StatCard({
   iconClassName?: string;
 }) {
   return (
-    <div className="rounded-lg border border-gray-200 bg-white px-4 py-3.5 shadow-sm">
+    <div className="rounded-lg border border-gray-200 bg-white dark:bg-gray-900 dark:border-gray-800 px-4 py-3 card-hover">
       <div className="flex items-center justify-between">
         <p className="text-[12px] font-medium text-gray-500 uppercase tracking-wide">
           {title}

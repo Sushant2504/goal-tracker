@@ -207,8 +207,8 @@ export default function CyclesPage() {
             >
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-2.5">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-md bg-indigo-50">
-                    <CalendarDays className="h-4 w-4 text-indigo-600" />
+                  <div className="flex h-8 w-8 items-center justify-center rounded-md bg-blue-50">
+                    <CalendarDays className="h-4 w-4 text-blue-600" />
                   </div>
                   <div>
                     <h3 className="text-[13px] font-semibold text-gray-900">

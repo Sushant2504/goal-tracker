@@ -194,8 +194,8 @@ export default function SettingsPage() {
           <TabsContent value="smtp">
             <div className="rounded-lg border border-gray-200 bg-white p-4 space-y-4">
               <div className="flex items-center gap-2.5 mb-1">
-                <div className="flex h-8 w-8 items-center justify-center rounded-md bg-indigo-50">
-                  <Mail className="h-4 w-4 text-indigo-600" />
+                <div className="flex h-8 w-8 items-center justify-center rounded-md bg-blue-50">
+                  <Mail className="h-4 w-4 text-blue-600" />
                 </div>
                 <div>
                   <h2 className="text-[13px] font-semibold text-gray-900">

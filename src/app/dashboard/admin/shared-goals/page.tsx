@@ -217,8 +217,8 @@ export default function SharedGoalsPage() {
             >
               <div className="flex items-start justify-between mb-2">
                 <div className="flex items-center gap-2.5">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-md bg-indigo-50">
-                    <Target className="h-4 w-4 text-indigo-600" />
+                  <div className="flex h-8 w-8 items-center justify-center rounded-md bg-blue-50">
+                    <Target className="h-4 w-4 text-blue-600" />
                   </div>
                   <div className="min-w-0">
                     <h3 className="text-[13px] font-semibold text-gray-900 truncate">
@@ -395,7 +395,7 @@ export default function SharedGoalsPage() {
                   <button
                     type="button"
                     onClick={selectAll}
-                    className="text-[11px] text-indigo-600 hover:text-indigo-800 font-medium"
+                    className="text-[11px] text-blue-600 hover:text-blue-800 font-medium"
                   >
                     Select All
                   </button>
@@ -415,7 +415,7 @@ export default function SharedGoalsPage() {
                   placeholder="Search employees..."
                   value={employeeSearch}
                   onChange={(e) => setEmployeeSearch(e.target.value)}
-                  className="w-full rounded-md border border-gray-200 bg-white pl-8 pr-3 py-1.5 text-[13px] text-gray-900 placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-200"
+                  className="w-full rounded-md border border-gray-200 bg-white pl-8 pr-3 py-1.5 text-[13px] text-gray-900 placeholder:text-gray-400 focus:border-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-200"
                 />
               </div>
               <div className="border border-gray-200 rounded-md max-h-40 overflow-y-auto">
@@ -433,7 +433,7 @@ export default function SharedGoalsPage() {
                         type="checkbox"
                         checked={selectedEmployees.includes(emp.id)}
                         onChange={() => toggleEmployee(emp.id)}
-                        className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-600"
                       />
                       <div className="min-w-0">
                         <div className="text-[13px] font-medium text-gray-900 truncate">

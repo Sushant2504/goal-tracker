@@ -25,6 +25,10 @@ import { UserAvatar } from "@/components/shared/UserAvatar";
 import { FilterBar, FilterSelect } from "@/components/shared/FilterBar";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { TableSkeleton } from "@/components/shared/LoadingSkeleton";
+import { SortableHeader } from "@/components/shared/SortableHeader";
+import { useSortable } from "@/hooks/useSortable";
+import { ActiveFilters } from "@/components/shared/ActiveFilters";
+import { HoverPreviewCard } from "@/components/shared/HoverCard";
 import {
   Users,
   UserCheck,
@@ -113,8 +117,10 @@ export default function EmployeesPage() {
     );
   });
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const paged = filtered.slice((page - 1) * pageSize, page * pageSize);
+  const { sortedData: sortedFiltered, sortConfig, requestSort } = useSortable<Employee>(filtered);
+
+  const totalPages = Math.max(1, Math.ceil(sortedFiltered.length / pageSize));
+  const paged = sortedFiltered.slice((page - 1) * pageSize, page * pageSize);
 
   const getSheetStatus = (emp: Employee) => {
     if (!emp.goalSheets || emp.goalSheets.length === 0) return "No Sheet";
@@ -141,7 +147,7 @@ export default function EmployeesPage() {
           title="Total Employees"
           value={employees.length}
           icon={Users}
-          iconClassName="bg-indigo-100"
+          iconClassName="bg-blue-100"
         />
         <StatCard
           title="Managers"
@@ -201,6 +207,56 @@ export default function EmployeesPage() {
         />
       </FilterBar>
 
+      <ActiveFilters
+        filters={[
+          ...(departmentFilter
+            ? [
+                {
+                  key: "department",
+                  label: "Department",
+                  value: departmentFilter,
+                  onRemove: () => {
+                    setDepartmentFilter("");
+                    setPage(1);
+                  },
+                },
+              ]
+            : []),
+          ...(roleFilter
+            ? [
+                {
+                  key: "role",
+                  label: "Role",
+                  value: roleFilter,
+                  onRemove: () => {
+                    setRoleFilter("");
+                    setPage(1);
+                  },
+                },
+              ]
+            : []),
+          ...(searchQuery
+            ? [
+                {
+                  key: "search",
+                  label: "Search",
+                  value: searchQuery,
+                  onRemove: () => {
+                    setSearchQuery("");
+                    setPage(1);
+                  },
+                },
+              ]
+            : []),
+        ]}
+        onClearAll={() => {
+          setDepartmentFilter("");
+          setRoleFilter("");
+          setSearchQuery("");
+          setPage(1);
+        }}
+      />
+
       {loading ? (
         <TableSkeleton rows={8} cols={6} />
       ) : filtered.length === 0 ? (
@@ -214,17 +270,17 @@ export default function EmployeesPage() {
           <Table>
             <TableHeader>
               <TableRow className="bg-gray-50/80">
-                <TableHead className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold py-2 px-3">
-                  Employee
+                <TableHead className="py-2 px-3">
+                  <SortableHeader label="Employee" sortKey="name" currentSort={sortConfig} onSort={requestSort} />
                 </TableHead>
-                <TableHead className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold py-2 px-3">
-                  Email
+                <TableHead className="py-2 px-3">
+                  <SortableHeader label="Email" sortKey="email" currentSort={sortConfig} onSort={requestSort} />
                 </TableHead>
-                <TableHead className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold py-2 px-3">
-                  Department
+                <TableHead className="py-2 px-3">
+                  <SortableHeader label="Department" sortKey="department" currentSort={sortConfig} onSort={requestSort} />
                 </TableHead>
-                <TableHead className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold py-2 px-3">
-                  Role
+                <TableHead className="py-2 px-3">
+                  <SortableHeader label="Role" sortKey="role" currentSort={sortConfig} onSort={requestSort} />
                 </TableHead>
                 <TableHead className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold py-2 px-3">
                   Manager
@@ -240,10 +296,32 @@ export default function EmployeesPage() {
                 <TableRow key={emp.id}>
                   <TableCell className="py-2 px-3">
                     <div className="flex items-center gap-2.5">
-                      <UserAvatar name={emp.name || "?"} size="sm" />
-                      <span className="text-[13px] font-medium text-gray-900">
-                        {emp.name}
-                      </span>
+                      <UserAvatar
+                        name={emp.name || "?"}
+                        size="sm"
+                        showTooltip
+                        department={emp.department || undefined}
+                        role={emp.role}
+                      />
+                      <HoverPreviewCard
+                        title={emp.name}
+                        subtitle={emp.department || undefined}
+                        stats={[
+                          { label: "Role", value: emp.role },
+                          {
+                            label: "Goals",
+                            value: emp._count?.goalSheets ?? emp.goalSheets?.length ?? 0,
+                          },
+                          {
+                            label: "Status",
+                            value: getSheetStatus(emp),
+                          },
+                        ]}
+                      >
+                        <span className="text-[13px] font-medium text-gray-900">
+                          {emp.name}
+                        </span>
+                      </HoverPreviewCard>
                     </div>
                   </TableCell>
                   <TableCell className="py-2 px-3 text-[13px] text-gray-600">
@@ -302,8 +380,8 @@ export default function EmployeesPage() {
               <div className="text-[11px] text-gray-500">
                 Showing {(page - 1) * pageSize + 1}
                 {" - "}
-                {Math.min(page * pageSize, filtered.length)} of{" "}
-                {filtered.length}
+                {Math.min(page * pageSize, sortedFiltered.length)} of{" "}
+                {sortedFiltered.length}
               </div>
               <div className="flex items-center gap-1.5">
                 <Button

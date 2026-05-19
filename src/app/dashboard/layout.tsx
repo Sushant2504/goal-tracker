@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Sidebar, MobileSidebar } from "@/components/layout/Sidebar";
@@ -9,6 +9,8 @@ import { UserProfileDropdown } from "@/components/layout/UserProfileDropdown";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { CommandPalette } from "@/components/layout/CommandPalette";
 import { KeyboardShortcutsDialog } from "@/components/layout/KeyboardShortcutsDialog";
+import { TopLoadingBar } from "@/components/layout/TopLoadingBar";
+
 import { Menu, Search } from "lucide-react";
 
 export default function DashboardLayout({
@@ -23,8 +25,8 @@ export default function DashboardLayout({
 
   if (status === "loading") {
     return (
-      <div className="flex h-screen items-center justify-center bg-gray-50">
-        <div className="h-8 w-8 animate-spin rounded-full border-3 border-indigo-200 border-t-indigo-600" />
+      <div className="flex h-screen items-center justify-center bg-gray-50 dark:bg-gray-950">
+        <div className="h-8 w-8 animate-spin rounded-full border-3 border-blue-200 border-t-blue-700 dark:border-blue-800 dark:border-t-blue-400" />
       </div>
     );
   }
@@ -35,7 +37,10 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50/80">
+    <div className="flex h-screen overflow-hidden bg-gradient-to-br from-gray-50 to-slate-100/50 dark:from-gray-950 dark:to-gray-900">
+      <Suspense>
+        <TopLoadingBar />
+      </Suspense>
       <div className="hidden lg:flex">
         <Sidebar
           collapsed={sidebarCollapsed}
@@ -46,7 +51,7 @@ export default function DashboardLayout({
       <MobileSidebar open={mobileOpen} onClose={() => setMobileOpen(false)} />
 
       <div className="flex flex-1 flex-col overflow-hidden min-w-0">
-        <header className="flex h-12 items-center justify-between border-b border-gray-200/80 bg-white px-4 sm:px-5 shrink-0">
+        <header className="flex h-12 items-center justify-between border-b border-gray-200/80 bg-white dark:bg-gray-900 dark:border-gray-800 px-4 sm:px-5 shrink-0">
           <div className="flex items-center gap-2">
             <button
               onClick={() => setMobileOpen(true)}
@@ -56,7 +61,7 @@ export default function DashboardLayout({
               <Menu className="h-4.5 w-4.5" />
             </button>
             <span className="text-[13px] font-medium text-gray-700">
-              {session?.user?.department || "GoalTracker"}
+              {session?.user?.department || "AtomBurg Nexus"}
             </span>
           </div>
 
@@ -82,6 +87,7 @@ export default function DashboardLayout({
         <main className="flex-1 overflow-y-auto px-4 sm:px-5 lg:px-6 py-4">
           {children}
         </main>
+
       </div>
 
       <CommandPalette />

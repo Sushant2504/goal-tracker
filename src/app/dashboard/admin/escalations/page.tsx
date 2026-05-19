@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,8 @@ import { StatusBadge } from "@/components/shared/StatusBadge";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { TableSkeleton } from "@/components/shared/LoadingSkeleton";
 import { PageSkeleton } from "@/components/shared/LoadingSkeleton";
+import { SortableHeader } from "@/components/shared/SortableHeader";
+import { useSortable } from "@/hooks/useSortable";
 import { toast } from "sonner";
 import {
   AlertTriangle,
@@ -213,6 +215,20 @@ export default function EscalationsPage() {
     }
   }
 
+  // Flatten escalation data for sorting
+  const flatEscalations = useMemo(() => {
+    return escalations.map((esc) => ({
+      ...esc,
+      _employee: esc.targetUser?.name || esc.targetUserId,
+      _type: esc.rule ? (RULE_TYPE_LABELS[esc.rule.type] || esc.rule.type) : esc.ruleId,
+      _level: esc.currentLevel,
+      _status: esc.status,
+      _date: esc.triggeredAt,
+    }));
+  }, [escalations]);
+
+  const { sortedData: sortedEscalations, sortConfig: escSortConfig, requestSort: escRequestSort } = useSortable(flatEscalations);
+
   if (authStatus === "loading") {
     return <PageSkeleton />;
   }
@@ -365,23 +381,23 @@ export default function EscalationsPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-gray-50/80">
-                    <TableHead className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold py-2 px-3">
-                      Employee
+                    <TableHead className="py-2 px-3">
+                      <SortableHeader label="Employee" sortKey="_employee" currentSort={escSortConfig} onSort={escRequestSort} />
                     </TableHead>
-                    <TableHead className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold py-2 px-3">
-                      Rule
+                    <TableHead className="py-2 px-3">
+                      <SortableHeader label="Type" sortKey="_type" currentSort={escSortConfig} onSort={escRequestSort} />
                     </TableHead>
                     <TableHead className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold py-2 px-3">
                       Cycle
                     </TableHead>
-                    <TableHead className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold py-2 px-3 text-center">
-                      Level
+                    <TableHead className="py-2 px-3 text-center">
+                      <SortableHeader label="Level" sortKey="_level" currentSort={escSortConfig} onSort={escRequestSort} />
                     </TableHead>
-                    <TableHead className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold py-2 px-3 text-center">
-                      Status
+                    <TableHead className="py-2 px-3 text-center">
+                      <SortableHeader label="Status" sortKey="_status" currentSort={escSortConfig} onSort={escRequestSort} />
                     </TableHead>
-                    <TableHead className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold py-2 px-3">
-                      Triggered
+                    <TableHead className="py-2 px-3">
+                      <SortableHeader label="Triggered" sortKey="_date" currentSort={escSortConfig} onSort={escRequestSort} />
                     </TableHead>
                     <TableHead className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold py-2 px-3">
                       Resolved
@@ -389,7 +405,7 @@ export default function EscalationsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {escalations.map((esc) => (
+                  {sortedEscalations.map((esc) => (
                     <TableRow key={esc.id}>
                       <TableCell className="py-2 px-3">
                         <div className="text-[13px] font-medium text-gray-900">
@@ -410,7 +426,7 @@ export default function EscalationsPage() {
                         {esc.cycle?.name || esc.cycleId.slice(0, 8)}
                       </TableCell>
                       <TableCell className="py-2 px-3 text-center">
-                        <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-indigo-50 text-[11px] font-bold text-indigo-700">
+                        <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-blue-50 text-[11px] font-bold text-blue-700">
                           {esc.currentLevel}
                         </span>
                       </TableCell>
@@ -526,7 +542,7 @@ export default function EscalationsPage() {
                     isActive: e.target.checked,
                   })
                 }
-                className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                className="rounded border-gray-300 text-blue-600 focus:ring-blue-600"
               />
               <label
                 htmlFor="isActive"

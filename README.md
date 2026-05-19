@@ -1,36 +1,62 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AtomBurg Nexus
+
+Performance Goal Management System built for the AtomQuest Hackathon 1.0.
 
 ## Getting Started
 
-First, run the development server:
+### Install dependencies
+
+```bash
+npm install
+```
+
+### Seed the database
+
+```bash
+npx tsx prisma/seed.ts
+```
+
+### Run the development server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Login Credentials
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Admin
 
-## Learn More
+| Email | Password |
+|---|---|
+| admin@atomburg.com | admin123 |
 
-To learn more about Next.js, take a look at the following resources:
+### Managers
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Email | Password | Department |
+|---|---|---|
+| manager1@atomburg.com | manager123 | Engineering |
+| manager2@atomburg.com | manager123 | Operations |
+| manager3@atomburg.com | manager123 | Sales |
+| manager4@atomburg.com | manager123 | Marketing |
+| manager5@atomburg.com | manager123 | Finance |
+| manager6@atomburg.com | manager123 | Product |
+| manager7@atomburg.com | manager123 | Design |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Employees
 
-## Deploy on Vercel
+| Email | Password |
+|---|---|
+| emp1@atomburg.com through emp50@atomburg.com | emp123 |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+50 employees across 7 departments with a mix of goal sheet statuses: DRAFT (10), SUBMITTED (14), APPROVED (17), RETURNED (9).
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Tech Stack
+
+- Next.js (App Router)
+- Prisma + SQLite
+- NextAuth.js
+- Tailwind CSS + shadcn/ui
+- Recharts
+- TypeScript

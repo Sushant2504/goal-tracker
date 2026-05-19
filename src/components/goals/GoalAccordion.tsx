@@ -39,7 +39,7 @@ export function GoalAccordion({ goal }: GoalAccordionProps) {
         className="flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] hover:bg-gray-50/80 transition-colors"
       >
         <ChevronRight
-          className={`h-3.5 w-3.5 text-gray-400 shrink-0 transition-transform ${
+          className={`h-3.5 w-3.5 text-gray-400 shrink-0 transition-transform duration-200 ${
             expanded ? "rotate-90" : ""
           }`}
         />
@@ -58,7 +58,7 @@ export function GoalAccordion({ goal }: GoalAccordionProps) {
       </button>
 
       {expanded && (
-        <div className="border-t px-3 py-2.5 space-y-2 text-[12px]">
+        <div className="border-t px-3 py-2.5 space-y-2 text-[12px] animate-slide-down">
           {goal.description && (
             <div>
               <span className="text-gray-400 font-medium">Description</span>

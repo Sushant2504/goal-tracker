@@ -138,7 +138,7 @@ export function NotificationsDropdown() {
               Notifications
             </span>
             {unreadCount > 0 && (
-              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-indigo-100 px-1.5 text-[10px] font-medium text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300">
+              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-100 px-1.5 text-[10px] font-medium text-blue-700 dark:bg-blue-900/50 dark:text-blue-300">
                 {unreadCount}
               </span>
             )}
@@ -146,7 +146,7 @@ export function NotificationsDropdown() {
           {unreadCount > 0 && (
             <button
               onClick={markAllAsRead}
-              className="text-[11px] font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
+              className="text-[11px] font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
             >
               Mark all as read
             </button>
@@ -173,14 +173,14 @@ export function NotificationsDropdown() {
                 onClick={() => handleNotificationClick(notification)}
                 className={`flex w-full items-start gap-3 px-3 py-2.5 text-left hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ${
                   !notification.isRead
-                    ? "bg-indigo-50/50 dark:bg-indigo-950/20"
+                    ? "bg-blue-50/50 dark:bg-blue-950/20"
                     : ""
                 }`}
               >
                 <div
                   className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${
                     !notification.isRead
-                      ? "bg-indigo-500"
+                      ? "bg-blue-600"
                       : "bg-transparent"
                   }`}
                 />
@@ -199,6 +199,17 @@ export function NotificationsDropdown() {
             ))
           )}
         </div>
+
+        <DropdownMenuSeparator />
+        <button
+          onClick={() => {
+            setOpen(false);
+            router.push("/dashboard/notifications");
+          }}
+          className="flex w-full items-center justify-center py-2 text-[12px] font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50/50 dark:text-blue-400 dark:hover:text-blue-300 dark:hover:bg-blue-950/30 transition-colors"
+        >
+          View all notifications
+        </button>
       </DropdownMenuContent>
     </DropdownMenu>
   );

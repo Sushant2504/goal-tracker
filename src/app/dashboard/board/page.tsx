@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useSession } from "next-auth/react";
 import {
   DragDropContext,
@@ -9,6 +9,7 @@ import {
 import { KanbanColumn } from "@/components/board/KanbanColumn";
 import { GoalDetailPanel } from "@/components/goals/GoalDetailPanel";
 import { GoalSheetCardData } from "@/components/board/GoalSheetCard";
+import { CycleProgressBar } from "@/components/shared/CycleProgressBar";
 import {
   Select,
   SelectTrigger,
@@ -16,7 +17,7 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
-import { Loader2, LayoutGrid } from "lucide-react";
+import { Loader2, LayoutGrid, X } from "lucide-react";
 
 const STATUSES = ["DRAFT", "SUBMITTED", "APPROVED", "RETURNED"] as const;
 
@@ -24,6 +25,23 @@ interface Cycle {
   id: string;
   name: string;
   status: string;
+  goalSettingOpens: string;
+  goalSettingCloses: string;
+  q1Opens: string;
+  q1Closes: string;
+  q2Opens: string;
+  q2Closes: string;
+  q3Opens: string;
+  q3Closes: string;
+  q4Opens: string;
+  q4Closes: string;
+}
+
+type FilterType = "all" | "department" | "assignee";
+
+interface ActiveFilter {
+  type: FilterType;
+  value: string;
 }
 
 export default function BoardPage() {
@@ -34,6 +52,7 @@ export default function BoardPage() {
   const [loading, setLoading] = useState(true);
   const [panelSheetId, setPanelSheetId] = useState<string | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
+  const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([]);
 
   // Fetch cycles
   useEffect(() => {
@@ -84,8 +103,73 @@ export default function BoardPage() {
     fetchSheets();
   }, [fetchSheets]);
 
+  // Extract unique departments and top assignees for quick filters
+  const departments = useMemo(() => {
+    const depts = new Set<string>();
+    sheets.forEach((s) => {
+      if (s.employee.department) depts.add(s.employee.department);
+    });
+    return Array.from(depts).sort();
+  }, [sheets]);
+
+  const topAssignees = useMemo(() => {
+    const counts = new Map<string, { name: string; count: number }>();
+    sheets.forEach((s) => {
+      const existing = counts.get(s.employee.id);
+      if (existing) {
+        existing.count++;
+      } else {
+        counts.set(s.employee.id, { name: s.employee.name, count: 1 });
+      }
+    });
+    return Array.from(counts.entries())
+      .sort((a, b) => b[1].count - a[1].count)
+      .slice(0, 5)
+      .map(([id, data]) => ({ id, name: data.name }));
+  }, [sheets]);
+
+  const selectedCycle = useMemo(
+    () => cycles.find((c) => c.id === selectedCycleId) ?? null,
+    [cycles, selectedCycleId]
+  );
+
+  // Filter sheets based on active filters (AND logic)
+  const filteredSheets = useMemo(() => {
+    if (activeFilters.length === 0) return sheets;
+    return sheets.filter((sheet) => {
+      return activeFilters.every((filter) => {
+        if (filter.type === "department") {
+          return sheet.employee.department === filter.value;
+        }
+        if (filter.type === "assignee") {
+          return sheet.employee.name === filter.value;
+        }
+        return true;
+      });
+    });
+  }, [sheets, activeFilters]);
+
+  function toggleFilter(type: FilterType, value: string) {
+    if (type === "all") {
+      setActiveFilters([]);
+      return;
+    }
+    setActiveFilters((prev) => {
+      const exists = prev.find((f) => f.type === type && f.value === value);
+      if (exists) {
+        return prev.filter((f) => !(f.type === type && f.value === value));
+      }
+      return [...prev, { type, value }];
+    });
+  }
+
+  function isFilterActive(type: FilterType, value: string): boolean {
+    if (type === "all") return activeFilters.length === 0;
+    return activeFilters.some((f) => f.type === type && f.value === value);
+  }
+
   function getSheetsByStatus(status: string): GoalSheetCardData[] {
-    return sheets.filter((s) => s.status === status);
+    return filteredSheets.filter((s) => s.status === status);
   }
 
   async function handleDragEnd(result: DropResult) {
@@ -180,6 +264,84 @@ export default function BoardPage() {
         </Select>
       </div>
 
+      {/* Cycle Progress Bar */}
+      {selectedCycle && (
+        <div className="mb-3">
+          <CycleProgressBar
+            cycle={{
+              goalSettingOpens: selectedCycle.goalSettingOpens,
+              goalSettingCloses: selectedCycle.goalSettingCloses,
+              q1Opens: selectedCycle.q1Opens,
+              q1Closes: selectedCycle.q1Closes,
+              q2Opens: selectedCycle.q2Opens,
+              q2Closes: selectedCycle.q2Closes,
+              q3Opens: selectedCycle.q3Opens,
+              q3Closes: selectedCycle.q3Closes,
+              q4Opens: selectedCycle.q4Opens,
+              q4Closes: selectedCycle.q4Closes,
+            }}
+          />
+        </div>
+      )}
+
+      {/* Quick Filters */}
+      {!loading && sheets.length > 0 && (
+        <div className="flex items-center gap-1.5 mb-3 flex-wrap animate-fade-in">
+          {/* All chip */}
+          <button
+            onClick={() => toggleFilter("all", "")}
+            className={`text-[12px] px-2.5 py-1 rounded-full border cursor-pointer transition-colors ${
+              isFilterActive("all", "")
+                ? "bg-blue-100 text-blue-700 border-blue-200"
+                : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
+            }`}
+          >
+            All
+          </button>
+
+          {/* Department chips */}
+          {departments.map((dept) => (
+            <button
+              key={`dept-${dept}`}
+              onClick={() => toggleFilter("department", dept)}
+              className={`text-[12px] px-2.5 py-1 rounded-full border cursor-pointer transition-colors ${
+                isFilterActive("department", dept)
+                  ? "bg-blue-100 text-blue-700 border-blue-200"
+                  : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
+              }`}
+            >
+              {dept}
+            </button>
+          ))}
+
+          {/* Assignee chips */}
+          {topAssignees.map((assignee) => (
+            <button
+              key={`assignee-${assignee.id}`}
+              onClick={() => toggleFilter("assignee", assignee.name)}
+              className={`text-[12px] px-2.5 py-1 rounded-full border cursor-pointer transition-colors ${
+                isFilterActive("assignee", assignee.name)
+                  ? "bg-blue-100 text-blue-700 border-blue-200"
+                  : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
+              }`}
+            >
+              {assignee.name}
+            </button>
+          ))}
+
+          {/* Clear filters */}
+          {activeFilters.length > 0 && (
+            <button
+              onClick={() => setActiveFilters([])}
+              className="flex items-center gap-1 text-[12px] text-blue-600 hover:text-blue-700 ml-1 cursor-pointer"
+            >
+              <X className="h-3 w-3" />
+              Clear filters
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Board */}
       {loading ? (
         <div className="flex flex-1 items-center justify-center">
@@ -187,7 +349,7 @@ export default function BoardPage() {
         </div>
       ) : (
         <DragDropContext onDragEnd={handleDragEnd}>
-          <div className="grid grid-cols-4 gap-3 flex-1 min-h-0">
+          <div className="grid grid-cols-4 gap-3 flex-1 min-h-0 animate-fade-in-up">
             {STATUSES.map((status) => (
               <KanbanColumn
                 key={status}
